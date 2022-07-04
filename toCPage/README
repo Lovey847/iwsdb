@@ -1,0 +1,2 @@
+This is a small tool I wrote to convert a 2048x2048 32-bit BMP into a raw compressed texture format.
+Seeing as I never originally intended to release this, portability wasn't a concern.

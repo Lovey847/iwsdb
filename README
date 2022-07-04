@@ -1,0 +1,33 @@
+All the source code for I Wanna Slay the Dragon of Bangan
+
+It comes with an old version of LoveyLib, a library I made
+to abstract platform-dependent interfaces. This older
+version has a plethora of issues, so you probably
+shouldn't use it.
+
+I made this in 7-8 days for Duncan's I Wanna Game Jam. I
+used an engine I wrote 2-3 days prior, after getting the
+okay to write one for this game. Though I'd wager at least
+a third of the engine's features were written during
+development.
+
+The original jam version of this game is probably lost
+because I didn't use a source control, decided not to
+because I can work faster without one. That doesn't mean I
+don't normally use one (if that was the case I probably
+wouldn't release this on github), it's just slower and I
+had to pump this out.
+
+This repo is just for the source code, so no assets are
+included.
+
+###############
+### WARNING ###
+###############
+This is an engine + game I rushed out in 7-8 days for a
+game jam, NOT a polished engine that many will use and
+rely on for years to come.
+
+It's unstable, messy, hard to use, and very limited in
+functionality. Unless you're taking it on as a challenge,
+don't use this engine.
