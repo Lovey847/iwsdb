@@ -1,0 +1,9 @@
+.DS_Store
+*~
+mac/
+data/
+IWSDB_v2
+IWSDB_v2.*
+cmakemac/
+debug/
+data

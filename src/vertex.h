@@ -35,23 +35,25 @@
 #include "loveylib/vector.h"
 
 // Render vertex
+struct vertex_data_t {
+  f32 x, y, z;
+
+  u16 s, t;
+};
+
+struct vertex_coord_t {
+  u32 pad[3];
+  u16 x, y;
+};
+
 struct vertex_t {
   union {
-    // Vertex data
-    struct {
-      f32 x, y, z;
-
-      u16 s, t;
-    } data;
+    vertex_data_t data;
 
     // xyz = vertex position
     vec4 pos;
 
-    // w = texture coordinate
-    struct {
-      u32 pad[3];
-      u16 x, y;
-    } coord;
+    vertex_coord_t coord;
   };
 };
 static_assert(sizeof(vertex_t) == 16, "");

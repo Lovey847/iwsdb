@@ -82,7 +82,7 @@ struct arena_block_hdr_t {
 
   // Block name (remainder of block header size)
   inline char *name() {return (char*)(this+1);}
-  inline const char *name() const {return (const char*)name();}
+  inline const char *name() const {return (const char*)(this + 1);}
 
   // Block data
   inline void *data() {return (u8*)this + ARENA_BLOCK_HDR_SIZE;}
@@ -132,6 +132,7 @@ static inline void FillFreeBlock(free_arena_block_t *ent, arena_block_hdr_t *blk
 
 // Validate cache entry, if cache entry
 // is invalid it'll be nulled out
+#ifdef UNUSED
 static inline bptr ValidateCache(free_arena_block_t *free) {
   ASSERT(free->addr);
 
@@ -139,6 +140,7 @@ static inline bptr ValidateCache(free_arena_block_t *free) {
 
   return (bptr)free->addr->cache;
 }
+#endif  //UNUSED
 
 // Same thing, but for block
 static inline bptr ValidateCache(arena_block_hdr_t *blk) {

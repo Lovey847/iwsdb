@@ -65,10 +65,10 @@ static const sprite_t S_Sprites[SPR_COUNT] = {
 static constexpr const u16 BLOOD_X = 239;
 static constexpr const u16 BLOOD_Y = 107;
 static const rquad_t S_BloodQuad = {{
-    {{-2.f/GAME_WIDTH, -2.f/GAME_HEIGHT, 0.f, BLOOD_X, BLOOD_Y}},
-    {{2.f/GAME_WIDTH, 0.f, 0.f, BLOOD_X, BLOOD_Y}},
-    {{-2.f/GAME_WIDTH, 0.f, 0.f, BLOOD_X, BLOOD_Y}},
-    {{2.f/GAME_WIDTH, 2.f/GAME_HEIGHT, 0.f, BLOOD_X, BLOOD_Y}}
+    {{{-2.f/GAME_WIDTH, -2.f/GAME_HEIGHT, 0.f, BLOOD_X, BLOOD_Y}}},
+    {{{2.f/GAME_WIDTH, 0.f, 0.f, BLOOD_X, BLOOD_Y}}},
+    {{{-2.f/GAME_WIDTH, 0.f, 0.f, BLOOD_X, BLOOD_Y}}},
+    {{{2.f/GAME_WIDTH, 2.f/GAME_HEIGHT, 0.f, BLOOD_X, BLOOD_Y}}}
   }};
 
 #ifdef NDEBUG
@@ -110,17 +110,17 @@ static const tile_t S_TileCode[ETILE_COUNT] = {
 
 #define T_IMG(left, top, right, bottom, leftCoord, topCoord, rightCoord, bottomCoord) \
   {{                                                                    \
-      {{(left)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (topCoord)}}, \
-      {{(right)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (topCoord)}}, \
-      {{(left)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (bottomCoord)}}, \
-      {{(right)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (bottomCoord)}} \
+    {{{(left)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (topCoord)}}}, \
+    {{{(right)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (topCoord)}}}, \
+    {{{(left)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (bottomCoord)}}}, \
+    {{{(right)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (bottomCoord)}}} \
     }}
 #define T_IMGROT(left, top, right, bottom, leftCoord, topCoord, rightCoord, bottomCoord) \
   {{                                                                    \
-      {{(left)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (bottomCoord)}}, \
-      {{(right)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (topCoord)}}, \
-      {{(left)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (bottomCoord)}}, \
-      {{(right)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (topCoord)}} \
+    {{{(left)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (bottomCoord)}}}, \
+    {{{(right)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (topCoord)}}}, \
+    {{{(left)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (bottomCoord)}}}, \
+    {{{(right)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (topCoord)}}} \
     }}
 static const rquad_t S_TileQuad[ETILE_COUNT] = {
   {},
@@ -635,7 +635,7 @@ static void InitDragon(entity_t *me, entity_init_t *i) {
 }
 
 // Bullet spell killer entity
-static constexpr const bbox_t SBKILLER_BBOX = {0, -32, 32, 0};
+static constexpr const bbox_t SBKILLER_BBOX = {{0, -32, 32, 0}};
 
 static const entity_info_t S_SBKillerInfo = {
   ENT_SBKILLER,
@@ -653,7 +653,7 @@ static void InitSBKiller(entity_t *me, entity_init_t *i) {
 
 // Bullet spell entity
 static constexpr const f32 BULLET_SPD = 16.f;
-static constexpr const bbox_t SBULLET_BBOX = {-4, -4, 4, 4};
+static constexpr const bbox_t SBULLET_BBOX = {{-4, -4, 4, 4}};
 static constexpr const u32 BULLET_LIFETIME = 40;
 
 struct sbullet_t {
@@ -711,7 +711,7 @@ static void UpdateSBullet(entity_t *me, const input_t *i) {
 }
 
 // Spell entity
-static constexpr const bbox_t SPELL_BBOX = {4, -27, 27, -4};
+static constexpr const bbox_t SPELL_BBOX = {{4, -27, 27, -4}};
 
 struct spell_ent_t {
   entity_base_t b;
@@ -884,7 +884,7 @@ static void UpdateGameover(entity_t *me, const input_t*) {
 }
 
 // Warp entity
-static constexpr const ivec4 WARP_BBOX = {6, -26, 26, -6};
+static constexpr const ivec4 WARP_BBOX = {{6, -26, 26, -6}};
 
 struct warp_t {
   entity_base_t b;
@@ -915,7 +915,7 @@ static void InitWarp(entity_t *me, entity_init_t *i) {
 // Save entity
 static constexpr const i32 SAVE_IDLEFRAMES = 30;
 static constexpr const i32 SAVE_LIGHTFRAMES = 60;
-static constexpr const ivec4 SAVE_BBOX = {0, -31, 32, 0};
+static constexpr const ivec4 SAVE_BBOX = {{0, -31, 32, 0}};
 
 struct save_t {
   entity_base_t b;
@@ -979,7 +979,7 @@ static void SaveGame(entity_t *me) {
 }
 
 // Bullet entity
-static constexpr const ivec4 BULLET_BBOX = {-1, -3, 3, 1};
+static constexpr const ivec4 BULLET_BBOX = {{-1, -3, 3, 1}};
 static constexpr const u32 BULLET_CAP = 4;
 
 struct bullet_t {
@@ -1045,7 +1045,7 @@ static constexpr const f32 KID_VINEVSP = -2.f;
 static constexpr const f32 KID_FALLCHANGE = 0.45f;
 static constexpr const f32 KID_VINEJUMPHEIGHT = 9.f;
 static constexpr const f32 KID_VINEJUMPSPD = 15.f;
-static constexpr const bbox_t KID_BBOX = {12-17, 23-32, 23-17, 23-11};
+static constexpr const bbox_t KID_BBOX = {{12-17, 23-32, 23-17, 23-11}};
 static constexpr const f32 KID_JUMPSPELLHEIGHT = 12.f;
 static constexpr const ufast KID_BOOSTTIME = 15;
 static constexpr const f32 KID_BOOSTSPD = 4.f;
@@ -1527,6 +1527,7 @@ static rquad_t *GetTileQuad(rquad_t *quads, uptr quadCount, uptr tilePos) {
       return q;
 
   ASSERT(!"No tile found!");
+  return NULL;
 }
 
 // Get editor tile from tile and it's quad
@@ -1582,10 +1583,10 @@ static editor_tile_t EditorTileFromTileQuad(rquad_t *q, tile_t t) {
 
 static void TickTitle(input_t *input) {
   static const rquad_t titleQuad = {{
-      {{-1.f, 1.f, 0.f, 260, 0}},
-      {{1.f, 1.f, 0.f, 1060, 0}},
-      {{-1.f, -1.f, 0.f, 260, 608}},
-      {{1.f, -1.f, 0.f, 1060, 608}},
+      {{{-1.f, 1.f, 0.f, 260, 0}}},
+      {{{1.f, 1.f, 0.f, 1060, 0}}},
+      {{{-1.f, -1.f, 0.f, 260, 608}}},
+      {{{1.f, -1.f, 0.f, 1060, 608}}},
     }};
   DrawQuads(&titleQuad, 1);
 
@@ -1853,42 +1854,42 @@ static void TickEditor(input_t *input) {
 static const rquad_t S_SpellQuad[SPELL_COUNT-1] = {
   // SPELL_JUMP
   {{
-      {{-1.f+64.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 134, 168}},
-      {{-1.f+160.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 134+24, 168}},
-      {{-1.f+64.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 134, 168+24}},
-      {{-1.f+160.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 134+24, 168+24}},
+      {{{-1.f+64.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 134, 168}}},
+      {{{-1.f+160.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 134+24, 168}}},
+      {{{-1.f+64.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 134, 168+24}}},
+      {{{-1.f+160.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 134+24, 168+24}}},
     }},
 
   // SPELL_SHOOT
   {{
-      {{-1.f+64.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 160, 168}},
-      {{-1.f+160.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 160+24, 168}},
-      {{-1.f+64.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 160, 168+24}},
-      {{-1.f+160.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 160+24, 168+24}},
+      {{{-1.f+64.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 160, 168}}},
+      {{{-1.f+160.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 160+24, 168}}},
+      {{{-1.f+64.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 160, 168+24}}},
+      {{{-1.f+160.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 160+24, 168+24}}},
     }},
 
   // SPELL_SPEED
   {{
-      {{-1.f+64.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 186, 168}},
-      {{-1.f+160.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 186+24, 168}},
-      {{-1.f+64.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 186, 168+24}},
-      {{-1.f+160.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 186+24, 168+24}},
+      {{{-1.f+64.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 186, 168}}},
+      {{{-1.f+160.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 186+24, 168}}},
+      {{{-1.f+64.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 186, 168+24}}},
+      {{{-1.f+160.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 186+24, 168+24}}},
     }},
 
   // SPELL_FINAL
   {{
-      {{-1.f+64.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 212, 168}},
-      {{-1.f+160.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 212+24, 168}},
-      {{-1.f+64.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 212, 168+24}},
-      {{-1.f+160.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 212+24, 168+24}},
+      {{{-1.f+64.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 212, 168}}},
+      {{{-1.f+160.f/GAME_WIDTH, 1.f-64.f/GAME_HEIGHT, -0.99f, 212+24, 168}}},
+      {{{-1.f+64.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 212, 168+24}}},
+      {{{-1.f+160.f/GAME_WIDTH, 1.f-160.f/GAME_HEIGHT, -0.99f, 212+24, 168+24}}},
     }},
 };
 
 static const rquad_t S_SpellTutQuad = {{
-    {{-1.f+64.f/GAME_WIDTH, 1.f-175.f/GAME_HEIGHT, -0.99f, 730, 1489}},
-    {{-1.f+(64.f+94.f*4.f)/GAME_WIDTH, 1.f-175.f/GAME_HEIGHT, -0.99f, 730+94, 1489}},
-    {{-1.f+64.f/GAME_WIDTH, 1.f-(175.f+14.f*4.f)/GAME_HEIGHT, -0.99f, 730, 1489+14}},
-    {{-1.f+(64.f+94.f*4.f)/GAME_WIDTH, 1.f-(175.f+14.f*4.f)/GAME_HEIGHT, -0.99f, 730+94, 1489+14}},
+    {{{-1.f+64.f/GAME_WIDTH, 1.f-175.f/GAME_HEIGHT, -0.99f, 730, 1489}}},
+    {{{-1.f+(64.f+94.f*4.f)/GAME_WIDTH, 1.f-175.f/GAME_HEIGHT, -0.99f, 730+94, 1489}}},
+    {{{-1.f+64.f/GAME_WIDTH, 1.f-(175.f+14.f*4.f)/GAME_HEIGHT, -0.99f, 730, 1489+14}}},
+    {{{-1.f+(64.f+94.f*4.f)/GAME_WIDTH, 1.f-(175.f+14.f*4.f)/GAME_HEIGHT, -0.99f, 730+94, 1489+14}}},
   }};
 
 void UpdateGame(input_t *input) {
