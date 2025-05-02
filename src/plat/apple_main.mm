@@ -1,0 +1,209 @@
+/************************************************************
+ *
+ * Copyright (c) 2022 Lian Ferrand
+ *
+ * Permission is hereby granted, free of charge, to any
+ * person obtaining a copy of this software and associated
+ * documentation files (the "Software"), to deal in the
+ * Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice
+ * shall be included in all copies or substantial portions of
+ * the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+ * KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+ * WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+ * PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS
+ * OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+ * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * This file is part of I Wanna Slay the Dragon of Bangan
+ *
+ ************************************************************/
+
+#include "loveylib/types.h"
+#include "loveylib/timer.h"
+#include "loveylib/file.h"
+#include "mem.h"
+#include "audio.h"
+#include "log.h"
+#include "str.h"
+#include "draw.h"
+#include "game.h"
+#include "plat/apple_render.h"
+
+#import "plat/apple_view.h"
+
+#import <Cocoa/Cocoa.h>
+
+timestamp_t g_timerFrequency = 0;
+char g_fmtStr[FMTSTR_SIZE];
+
+static void CenterRect(NSRect *rect) {
+  const NSRect scrFrame = [[NSScreen mainScreen] frame];
+
+  rect->origin.x =
+    scrFrame.origin.x + (scrFrame.size.width - rect->size.width) * 0.5;
+  rect->origin.y =
+    scrFrame.origin.y + (scrFrame.size.height - rect->size.height) * 0.5;
+}
+
+@interface iwsdb_t : NSObject<NSApplicationDelegate, NSWindowDelegate> {
+  NSWindow *win;
+  apple_view_t *view;
+}
+
+@property (nonatomic,weak,readwrite) apple_view_t *view;
+
+@end    //@interface iwsdb_t
+
+@implementation iwsdb_t
+
+@synthesize view = view;
+
+- (id)init {
+  self = [super init];
+  if (self) {
+    NSRect winRect;
+
+    winRect = NSMakeRect(0, 0, 800, 608);
+    CenterRect(&winRect);
+
+    win =
+      [[NSWindow alloc] initWithContentRect:winRect
+                                  styleMask:(NSWindowStyleMaskTitled |
+                                             NSWindowStyleMaskClosable |
+                                             NSWindowStyleMaskMiniaturizable)
+                                    backing:NSBackingStoreBuffered
+                                      defer:NO];
+    [win setTitle:@"I wanna slay the dragon of bangan"];
+    [win setDelegate:self];
+
+    view =
+      [[apple_view_t alloc] initWithFrame:NSMakeRect(0, 0, winRect.size.width,
+                                                     winRect.size.height)];
+    [win setContentView:view];
+  }
+
+  return self;
+}
+
+- (void)dealloc {
+  [win release];
+  [view release];
+
+  [super dealloc];
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//      Application delegate methods
+
+- (void)applicationWillFinishLaunching:(NSNotification*)notif {
+  // Move into Resources, where the data directory resides
+  chdir([[[NSBundle mainBundle] resourcePath]
+          cStringUsingEncoding:NSUTF8StringEncoding]);
+
+  // Print the current directory
+#if 0
+  NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+  [alert setMessageText:[[NSFileManager defaultManager] currentDirectoryPath]];
+  [alert runModal];
+#endif
+
+  AllocMem();
+  InitTimer();
+  InitLogStreams();
+  g_timerFrequency = GetTimerFrequency();
+
+  CreateWindow(NULL, "I wanna slay the dragon of bangan");
+  InitAudio();
+  InitGame();
+
+  [NSTimer scheduledTimerWithTimeInterval:(1.0 / (double)GAME_FPS)
+                                  repeats:YES
+                                    block:^(NSTimer *timer) {
+      (void)timer;
+
+      [view UpdateDown];
+      UpdateGame([view GetInput]);
+      [view UpdateShift];
+      [view Render];
+      UpdateAudio();
+    }];
+}
+
+- (void)applicationDidFinishLaunching:(NSNotification*)notif {
+  [win makeKeyAndOrderFront:self];
+}
+
+- (void)applicationWillTerminate:(NSNotification*)notif {
+  stream_t saveFile = {};
+  if (g_state->save.valid() &&
+      OpenFile(&saveFile, "save.dat", FILE_WRITE_ONLY))
+  {
+    g_state->save.swap();
+    saveFile.f->write(&saveFile, &g_state->save, sizeof(game_save_t));
+    CloseFile(&saveFile);
+  } else if (g_state->save.valid()) {
+    LOG_INFO("== Unable to write save data! ==");
+  }
+
+  FreeGame();
+  FreeAudio();
+  CloseWindow(NULL);
+  CloseLogStreams();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//      Window delegate methods
+
+- (void)windowWillClose:(NSNotification*)notif {
+  [NSApp terminate:self];
+}
+
+@end    //@implementation iwsdb_t
+
+static apple_view_t *s_view;
+
+// Apple renderer methods
+void AppleDrawQuads(const rquad_t *quads, uptr quadCount) {
+  [s_view DrawQuads:quads
+          count:quadCount];
+}
+
+void AppleLoadTexturePart(const u32 *data, u32 left, u32 top, u32 right,
+                          u32 bottom)
+{
+  [s_view SetTexture:data
+                left:left
+                 top:top
+               right:right
+              bottom:bottom];
+}
+
+void AppleSetClearColor(f32 r, f32 g, f32 b) {
+  [s_view SetClearColor:MTLClearColorMake(r, g, b, 1.f)];
+}
+
+int main() {
+  @autoreleasepool {
+    [NSApplication sharedApplication];
+
+    iwsdb_t *app = [[[iwsdb_t alloc] init] autorelease];
+    [NSApp setDelegate:app];
+
+    s_view = app.view;
+
+    [NSApp activate];
+    [NSApp run];
+  }
+
+  return 0;
+}

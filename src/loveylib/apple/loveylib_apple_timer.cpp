@@ -26,75 +26,44 @@
  *
  * This file is part of LoveyLib
  *
- * src/loveylib/posix/loveylib_posix_timer.cpp:
- *  POSIX timer implementation
+ * src/loveylib/apple/loveylib_apple_timer.cpp:
+ *  Apple timer implementation
  *
  ************************************************************/
 
-#if defined(__APPLE__) && defined(__MACH__)
-
-#error "Apple timer routines are implemented in loveylib_apple_timer.cpp"
-
-#else
-
-// For clock_gettime and nanosleep
-#define _POSIX_C_SOURCE 199309L
+#include <mach/mach_time.h>
+#include <mach/mach.h>
+#include <unistd.h>
 
 #include "loveylib/timer.h"
 #include "loveylib/assert.h"
 #include "loveylib/utils.h"
-#include <time.h>
 
-// Make sure the user calls InitTimer before using
-// timer functions in the debug build
-IN_DEBUG (
+static mach_timebase_info_data_t s_timebaseInfo = {0, 0};
 
-static bfast initted = false;
-static inline void Init() {
-  initted = true;
-}
-
-)
-
-// In the release build, don't bother
-IN_RELEASE (
-
-static constexpr const bfast initted = true;
-static inline void Init() {}
-
-)
+#define IS_INITTED() (s_timebaseInfo.denom != 0)
 
 bfast InitTimer() {
-  // Don't initialize timer twice!
-  ASSERT(!initted);
+  mach_timebase_info(&s_timebaseInfo);
+  ASSERT(IS_INITTED());
 
-  // No initialization done on posix, but we
-  // need to make sure it's called
-  Init();
   return true;
 }
 
 timestamp_t GetTimerFrequency() {
-  ASSERT(initted);
-  return 1000000000;
+  ASSERT(IS_INITTED());
+  return 1000000000 * s_timebaseInfo.numer / s_timebaseInfo.denom;
 }
 
 timestamp_t GetTime() {
-  ASSERT(initted);
-
-  struct timespec ret;
-
-  clock_gettime(CLOCK_MONOTONIC_RAW, &ret);
-  return ret.tv_sec*1000000000 + ret.tv_nsec;
+  ASSERT(IS_INITTED());
+  return mach_absolute_time();
 }
 
 void MicrosecondDelay(timestamp_t freq, u32 microseconds) {
-  ASSERT(initted);
+  ASSERT(IS_INITTED());
+  ASSERT(freq == GetTimerFrequency());
+  (void)freq;
 
-  (void)freq; // Timer frequency is constant in POSIX
-  const struct timespec t = {microseconds/1000000, microseconds%1000000 * 1000};
-
-  nanosleep(&t, NULL);
+  usleep(microseconds);
 }
-
-#endif  //if !defined(__APPLE__) || !defined(__MACH__)
