@@ -39,6 +39,8 @@
 #include "game.h"
 #include "plat/apple_render.h"
 
+#include <sys/stat.h>
+
 #import "plat/apple_view.h"
 
 #import <Cocoa/Cocoa.h>
@@ -114,20 +116,26 @@ static void CenterRect(NSRect *rect) {
 
 - (void)applicationWillFinishLaunching:(NSNotification*)notif {
   // Move into Resources, where the data directory resides
-  chdir([[[NSBundle mainBundle] resourcePath]
-          cStringUsingEncoding:NSUTF8StringEncoding]);
-
-  // Print the current directory
-#if 0
-  NSAlert *alert = [[[NSAlert alloc] init] autorelease];
-  [alert setMessageText:[[NSFileManager defaultManager] currentDirectoryPath]];
-  [alert runModal];
-#endif
+  const char *dataDir = [[[NSBundle mainBundle] resourcePath]
+                          cStringUsingEncoding:NSUTF8StringEncoding];
+  chdir(dataDir);
 
   AllocMem();
   InitTimer();
   InitLogStreams();
   g_timerFrequency = GetTimerFrequency();
+
+  // Error out if data directory doesn't exist
+  struct stat dataDirStat;
+  if (stat("data", &dataDirStat) < 0) {
+    LOG_ERROR(FMT.s("Couldn't read data directory! Are you sure \"").s(dataDir)
+              .s("/data\" exists?").STR);
+  }
+
+  // Error out of data isn't a directory
+  if (!(dataDirStat.st_mode & S_IFDIR)) {
+    LOG_ERROR(FMT.s("\"").s(dataDir).s("/data\" isn't a directory!").STR);
+  }
 
   CreateWindow(NULL, "I wanna slay the dragon of bangan");
   InitAudio();
@@ -155,13 +163,16 @@ static void CenterRect(NSRect *rect) {
   CloseWindow(NULL);
   CloseLogStreams();
 
-  s_running = false;
+  if (s_running) {
+    
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 //      Window delegate methods
 
 - (void)windowWillClose:(NSNotification*)notif {
+  s_running = false;
   [NSApp terminate:self];
 }
 
