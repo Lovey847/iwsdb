@@ -8,3 +8,4 @@ cmakemac/
 debug/
 data
 cmakedebug/
+cmakerelease/

@@ -163,16 +163,13 @@ static void CenterRect(NSRect *rect) {
   CloseWindow(NULL);
   CloseLogStreams();
 
-  if (s_running) {
-    
-  }
+  s_running = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 //      Window delegate methods
 
 - (void)windowWillClose:(NSNotification*)notif {
-  s_running = false;
   [NSApp terminate:self];
 }
 
