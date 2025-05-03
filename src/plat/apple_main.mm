@@ -198,6 +198,14 @@ void AppleSetClearColor(f32 r, f32 g, f32 b) {
   [s_view SetClearColor:MTLClearColorMake(r, g, b, 1.f)];
 }
 
+// Apple alert methods
+void AppleAlert(const char *msg) {
+  NSString *str = [[[NSString alloc] initWithUTF8String:msg] autorelease];
+  NSAlert *alert = [[[NSAlert alloc] init] autorelease];
+  [alert setMessageText:str];
+  [alert runModal];
+}
+
 int main() {
   @autoreleasepool {
     [NSApplication sharedApplication];
