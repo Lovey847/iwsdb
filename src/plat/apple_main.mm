@@ -43,8 +43,15 @@
 
 #import <Cocoa/Cocoa.h>
 
+static apple_view_t *s_view;
+static bfast s_running = true;
+
 timestamp_t g_timerFrequency = 0;
 char g_fmtStr[FMTSTR_SIZE];
+
+static inline u32 TimeToMicro(timestamp_t time) {
+  return time*1000000/g_timerFrequency;
+}
 
 static void CenterRect(NSRect *rect) {
   const NSRect scrFrame = [[NSScreen mainScreen] frame];
@@ -125,18 +132,6 @@ static void CenterRect(NSRect *rect) {
   CreateWindow(NULL, "I wanna slay the dragon of bangan");
   InitAudio();
   InitGame();
-
-  [NSTimer scheduledTimerWithTimeInterval:(1.0 / (double)GAME_FPS)
-                                  repeats:YES
-                                    block:^(NSTimer *timer) {
-      (void)timer;
-
-      [view UpdateDown];
-      UpdateGame([view GetInput]);
-      [view UpdateShift];
-      [view Render];
-      UpdateAudio();
-    }];
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification*)notif {
@@ -159,6 +154,8 @@ static void CenterRect(NSRect *rect) {
   FreeAudio();
   CloseWindow(NULL);
   CloseLogStreams();
+
+  s_running = false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -169,8 +166,6 @@ static void CenterRect(NSRect *rect) {
 }
 
 @end    //@implementation iwsdb_t
-
-static apple_view_t *s_view;
 
 // Apple renderer methods
 void AppleDrawQuads(const rquad_t *quads, uptr quadCount) {
@@ -202,7 +197,37 @@ int main() {
     s_view = app.view;
 
     [NSApp activate];
-    [NSApp run];
+
+    [NSApp finishLaunching];
+
+    do {
+      u32 start = TimeToMicro(GetTime());
+
+      NSEvent *evt;
+      @autoreleasepool {
+        for (;;) {
+          evt = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                   untilDate:[NSDate distantPast]
+                                      inMode:NSDefaultRunLoopMode
+                                     dequeue:YES];
+          if (!evt) break;
+
+          [NSApp sendEvent:evt];
+          [NSApp updateWindows];
+        }
+      }
+
+      [s_view UpdateDown];
+      UpdateGame([s_view GetInput]);
+      [s_view UpdateShift];
+      [s_view Render];
+      UpdateAudio();
+
+      u32 end = TimeToMicro(GetTime());
+      if (end - start < 1000000 / GAME_FPS) {
+        MicrosecondDelay(g_timerFrequency, 1000000 / GAME_FPS - (end - start));
+      }
+    } while (s_running);
   }
 
   return 0;
