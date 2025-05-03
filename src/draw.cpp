@@ -42,6 +42,13 @@
 #include "str.h"
 #include "draw.h"
 
+#if defined(__APPLE__) && defined(__MACH__)
+#define APPLE_RENDER
+#include "plat/apple_render.h"
+#endif
+
+#ifndef APPLE_RENDER
+
 #ifndef NDEBUG
 #if 0
 #define GLF(...) s_gl-> __VA_ARGS__; LOG_INFO(#__VA_ARGS__); if (s_gl->GetError() != gl::NO_ERROR) LOG_INFO("OpenGL error");
@@ -78,23 +85,24 @@ static const char *fragmentShader =
 //  "  fragCol = vec4(gl_FragCoord.z, gl_FragCoord.z, gl_FragCoord.z, 1.0);\n"
   "  if (fragCol.a < 1.0) discard;\n"
   "}\n";
+#endif  //ifndef _APPLE_RENDER_H
 
 // Image list
 // Images that don't exist in given pages are given
 // {}
 #define T_IMG(left, top, right, bottom, leftCoord, topCoord, rightCoord, bottomCoord) \
   {{                                                                    \
-      {{(left)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (topCoord)}}, \
-      {{(right)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (topCoord)}}, \
-      {{(left)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (bottomCoord)}}, \
-      {{(right)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (bottomCoord)}} \
+    {{{(left)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (topCoord)}}}, \
+    {{{(right)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (topCoord)}}}, \
+    {{{(left)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (bottomCoord)}}}, \
+    {{{(right)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (bottomCoord)}}} \
     }}
 #define T_IMGROT(left, top, right, bottom, leftCoord, topCoord, rightCoord, bottomCoord) \
   {{                                                                    \
-      {{(left)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (bottomCoord)}}, \
-      {{(right)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (topCoord)}}, \
-      {{(left)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (bottomCoord)}}, \
-      {{(right)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (topCoord)}} \
+    {{{(left)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (bottomCoord)}}}, \
+    {{{(right)*2.f/GAME_WIDTH, (top)*2.f/GAME_HEIGHT, 0.f, (leftCoord), (topCoord)}}}, \
+    {{{(left)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (bottomCoord)}}}, \
+    {{{(right)*2.f/GAME_WIDTH, (bottom)*2.f/GAME_HEIGHT, 0.f, (rightCoord), (topCoord)}}} \
     }}
 static constexpr const rquad_t S_Images[IMG_COUNT] = {
   // IMG_PSTAND0-3
@@ -181,7 +189,9 @@ static constexpr const rquad_t S_Images[IMG_COUNT] = {
 #undef T_IMG
 #undef T_IMGROT
 
-// OpenGL state
+#ifndef APPLE_RENDER
+
+// Renderer state
 static constexpr const uptr VBO_VERTS = 16384;
 static constexpr const uptr VBO_SIZE = sizeof(vertex_t)*VBO_VERTS;
 
@@ -196,7 +206,11 @@ static gl::funcs_t *s_gl;
 static vertex_t *s_vertBuf;
 static uptr s_vertCount; // <= VBO_VERTS
 
+#endif  //ifndef APPLE_RENDER
+
 static page_t s_curPage;
+
+#ifndef APPLE_RENDER
 
 // Initialize shader program
 static bfast InitProgram() {
@@ -347,8 +361,11 @@ static void OrphanVertBuf() {
   }
 }
 
+#endif  //ifndef APPLE_RENDER
+
 // Create OpenGL window
 void CreateWindow(canvas_t *out, const char *title) {
+#ifndef APPLE_RENDER
   if (!CreateOpenGLCanvas(out, title, GAME_WIDTH, GAME_HEIGHT))
     LOG_ERROR("Cannot create OpenGL canvas!");
 
@@ -365,10 +382,14 @@ void CreateWindow(canvas_t *out, const char *title) {
   // Map vertex buffer when necessary
   s_vertBuf = NULL;
   s_vertCount = 0;
+#else   //ifndef APPLE_RENDER
+  (void)out; (void)title;
+#endif  //ifdef APPLE_RENDER
 
   // No page is currently active
   s_curPage = -1;
 
+#ifndef APPLE_RENDER
   // Enable alpha blending
 //  GLF(Enable(gl::BLEND));
 //  GLF(BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA));
@@ -380,6 +401,7 @@ void CreateWindow(canvas_t *out, const char *title) {
 
   // Enable scissor test
   GLF(Enable(gl::SCISSOR_TEST));
+#endif  //ifndef APPLE_RENDER
 
   // Set default clear color
   SetClearColor(0.f, 0.f, 0.f);
@@ -387,6 +409,7 @@ void CreateWindow(canvas_t *out, const char *title) {
 
 // Close OpenGL window, freeing any OpenGL resources along the way
 void CloseWindow(canvas_t *c) {
+#ifndef APPLE_RENDER
   GLF(DeleteTextures(1, &s_texture));
   GLF(BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0));
   GLF(BindBuffer(gl::ARRAY_BUFFER, 0));
@@ -396,6 +419,9 @@ void CloseWindow(canvas_t *c) {
   GLF(DeleteProgram(s_program));
 
   CloseCanvas(c);
+#else   //ifndef APPLE_RENDER
+  (void)c;
+#endif  //ifdef APPLE_RENDER
 }
 
 #ifndef COMPRESS_TEXTURES
@@ -529,8 +555,12 @@ void SetPage(page_t p) {
       imageData[i] = WritePixel(decomp);
 
 //    f.f->read(&f, imageData, 2048*4*curHeight);
+#ifndef APPLE_RENDER
     GLF(TexSubImage2D(gl::TEXTURE_2D, 0, 0, curY, 2048, curHeight,
                       gl::BGRA, gl::UNSIGNED_BYTE, imageData));
+#else
+    AppleLoadTexturePart(imageData, 0, curY, 2048, curY + curHeight);
+#endif
     curY += curHeight;
   }
 
@@ -553,6 +583,7 @@ void DrawImage(vec4 pos, vec4 scale, image_id_t img) {
   ASSERT(scale.v[3] == 1.f);
 
   // Setup vertices
+#ifndef APPLE_RENDER
   ASSERT(s_vertCount+4 <= VBO_VERTS);
 
   OrphanVertBuf();
@@ -562,26 +593,44 @@ void DrawImage(vec4 pos, vec4 scale, image_id_t img) {
   s_vertBuf[s_vertCount+3].pos = pos+S_Images[img].v[3].pos*scale;
 
   s_vertCount += 4;
+#else
+  rquad_t quad;
+
+  for (iptr i = 0; i < 4; ++i)
+    quad.v[i].pos = S_Images[img].v[i].pos * scale + pos;
+
+  AppleDrawQuads(&quad, 1);
+#endif
 }
 
 // Draw quads
 void DrawQuads(const rquad_t *quads, uptr quadCount) {
   ASSERT(quadCount > 0);
+
+#ifndef APPLE_RENDER
   ASSERT(s_vertCount+quadCount*4 <= VBO_VERTS);
 
   OrphanVertBuf();
   memcpy(s_vertBuf+s_vertCount, quads, sizeof(rquad_t)*quadCount);
 
   s_vertCount += quadCount*4;
+#else
+  AppleDrawQuads(quads, quadCount);
+#endif
 }
 
 // Set renderer clear color
 void SetClearColor(f32 r, f32 g, f32 b) {
+#ifndef APPLE_RENDER
   GLF(ClearColor(r, g, b, 1.f));
+#else
+  AppleSetClearColor(r, g, b);
+#endif
 }
 
 // Render game state
 void RenderGame() {
+#ifndef APPLE_RENDER
   GLF(Clear(gl::COLOR_BUFFER_BIT|gl::DEPTH_BUFFER_BIT));
 
   // Unmap buffer
@@ -595,4 +644,7 @@ void RenderGame() {
     GLF(DrawElements(gl::TRIANGLES, (s_vertCount>>2)*6, gl::UNSIGNED_SHORT, NULL));
     s_vertCount = 0;
   }
+#else
+  // Handled by platform layer
+#endif
 }
