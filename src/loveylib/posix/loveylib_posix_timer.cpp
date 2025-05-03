@@ -31,7 +31,9 @@
  *
  ************************************************************/
 
-#if defined(__APPLE__) && defined(__MACH__)
+#include "loveylib_config.h"
+
+#ifdef LOVEYLIB_APPLE
 
 #error "Apple timer routines are implemented in loveylib_apple_timer.cpp"
 
@@ -97,4 +99,4 @@ void MicrosecondDelay(timestamp_t freq, u32 microseconds) {
   nanosleep(&t, NULL);
 }
 
-#endif  //if !defined(__APPLE__) || !defined(__MACH__)
+#endif  //ifndef LOVEYLIB_APPLE

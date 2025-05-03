@@ -37,12 +37,13 @@
 #include "loveylib/vector.h"
 #include "loveylib/file.h"
 #include "loveylib/assert.h"
+#include "loveylib_config.h"
 #include "mem.h"
 #include "log.h"
 #include "str.h"
 #include "draw.h"
 
-#if defined(__APPLE__) && defined(__MACH__)
+#ifdef LOVEYLIB_APPLE
 #define APPLE_RENDER
 #include "plat/apple_render.h"
 #endif
