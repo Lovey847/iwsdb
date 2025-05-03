@@ -70,4 +70,7 @@
 // Does this platform have multi-threading support?
 #cmakedefine LOVEYLIB_THREADS
 
+// Is this platform macos?
+#cmakedefine LOVEYLIB_APPLE
+
 #endif //_LOVEYLIB_CONFIG_H

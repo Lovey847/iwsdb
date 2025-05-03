@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.games</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.lian.iwsdb</string>
+    <key>CFBundleName</key>
+    <string>I wanna slay the dragon of bangan</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>MacOS/fangame</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+  </dict>
+</plist>

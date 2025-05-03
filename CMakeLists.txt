@@ -47,7 +47,8 @@ endif ()
 # warnings and treat them as errors
 if (CMAKE_BUILD_TYPE STREQUAL Debug)
     if     (CMAKE_CXX_COMPILER_ID STREQUAL GNU OR
-            CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+            CMAKE_CXX_COMPILER_ID STREQUAL Clang OR
+            CMAKE_CXX_COMPILER_ID STREQUAL AppleClang)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wall -Wextra -Werror")
     endif ()
 endif ()
@@ -110,6 +111,11 @@ set(LOVEYLIB_WIN32_SOURCES
 set(LOVEYLIB_XLIB_SOURCES
     "${LOVEYLIB_DIR}/loveylib/xlib/loveylib_xlib_canvas.cpp"
     "${LOVEYLIB_DIR}/loveylib/xlib/loveylib_xlib_opengl.cpp")
+set(LOVEYLIB_APPLE_SOURCES
+    "${LOVEYLIB_DIR}/loveylib/apple/loveylib_apple_timer.cpp"
+    "${LOVEYLIB_DIR}/loveylib/posix/loveylib_posix_heap.cpp"
+    "${LOVEYLIB_DIR}/loveylib/posix/loveylib_posix_stream.cpp"
+    "${LOVEYLIB_DIR}/loveylib/posix/loveylib_posix_file.cpp")
 
 # Set C++ standard
 set_target_properties(fangame PROPERTIES CXX_STANDARD 11)
@@ -121,7 +127,6 @@ target_include_directories(fangame PRIVATE "${CMAKE_SOURCE_DIR}/src")
 target_include_directories(fangame PRIVATE "${CMAKE_BINARY_DIR}")
 target_sources(fangame PRIVATE "${LOVEYLIB_SOURCES}")
 target_sources(fangame PRIVATE
-    "${CMAKE_SOURCE_DIR}/src/main.cpp"
     "${CMAKE_SOURCE_DIR}/src/audio.cpp"
     "${CMAKE_SOURCE_DIR}/src/mem.cpp"
     "${CMAKE_SOURCE_DIR}/src/log.cpp"
@@ -141,49 +146,111 @@ set(LOVEYLIB_POSIX OFF)
 set(LOVEYLIB_THREADS OFF)
 set(LOVEYLIB_XLIB OFF)
 set(LOVEYLIB_XSHM OFF)
+set(LOVEYLIB_APPLE OFF)
+set(INCLUDE_MAIN_CPP ON)
 if (UNIX)
     # POSIX headers
     set(LOVEYLIB_POSIX ON)
-    target_sources(fangame PRIVATE "${LOVEYLIB_POSIX_SOURCES}")
 
-    # Pthreads
-    find_package(Threads)
-    if (CMAKE_USE_PTHREADS_INIT)
-        set(LOVEYLIB_THREADS ON)
-        target_link_libraries(fangame Threads::Threads)
-    endif ()
+    if (APPLE)
+        # Mac
+        set(LOVEYLIB_APPLE ON)
+        set(MAC_RESOURCES "${CMAKE_BINARY_DIR}/fangame.app/Contents/Resources")
 
-    # ALSA
-    find_package(ALSA REQUIRED)
-    if (NOT ALSA_FOUND)
-        message(FATAL_ERROR "Cannot find ALSA!")
-    endif ()
-    target_sources(fangame PRIVATE "src/plat/alsa_audio.cpp")
-    target_include_directories(fangame PRIVATE ${ALSA_INCLUDE_DIRS})
-    target_link_libraries(fangame ALSA::ALSA)
+        # Create app directory structure
+        file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/fangame.app"
+                            "${CMAKE_BINARY_DIR}/fangame.app/Contents"
+                            "${CMAKE_BINARY_DIR}/fangame.app/Contents/Resources"
+                            "${CMAKE_BINARY_DIR}/fangame.app/Contents/MacOS")
 
-    # Xlib
-    find_package(X11)
-    if (X11_FOUND)
-        set(LOVEYLIB_XLIB ON)
-        target_sources(fangame PRIVATE "${LOVEYLIB_XLIB_SOURCES}")
-        target_include_directories(fangame PRIVATE ${X11_X11_INCLUDE_PATH})
-        target_link_libraries(fangame X11::X11)
+        # Output executable into app folder
+        set_target_properties(fangame PROPERTIES OUTPUT_NAME
+                              "${CMAKE_BINARY_DIR}/fangame.app/Contents/MacOS/fangame")
 
-        if (X11_XShm_FOUND)
-            set(LOVEYLIB_XSHM ON)
-            target_include_directories(fangame PRIVATE ${X11_XShm_INCLUDE_PATH})
-            target_link_libraries(fangame X11::Xext)
+        # Copy Info.plist into app folder
+        file(COPY_FILE "${CMAKE_SOURCE_DIR}/src/plat/apple_info.plist"
+                       "${CMAKE_BINARY_DIR}/fangame.app/Contents/Info.plist")
+
+        # Add target for metal shaders
+        set(MC_FLAGS -Wall -Wextra -pedantic -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_BINARY_DIR})
+        set(MC_OUT "${MAC_RESOURCES}/default.metallib")
+        set(MC_SRC "${CMAKE_SOURCE_DIR}/src/plat/apple_shaders.metal")
+
+        if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+            set(MC_FLAGS "${MC_FLAGS} -Werror -g -O0")
+        elseif (CMAKE_BUIOD_TYPE STREQUAL "Release")
+            set(MC_FLAGS "${MC_FLAGS} -DNDEBUG -O2")
         endif ()
 
-        # OpenGL
-        find_package(OpenGL)
-        if (OPENGL_FOUND AND OpenGL_GLX_FOUND AND NOT LOVEYLIB_DISABLE_OPENGL)
-            set(LOVEYLIB_OPENGL ON)
-            target_include_directories(fangame PRIVATE
-                ${OPENGL_INCLUDE_DIR}
-                ${OPENGL_GLX_INCLUDE_DIR})
-            target_link_libraries(fangame OpenGL::GL OpenGL::GLX)
+        add_custom_command(OUTPUT "${MC_OUT}"
+                           COMMAND xcrun -sdk macosx metal ${MC_FLAGS} ${MC_SRC} -o ${MC_OUT}
+                           WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+                           COMMENT "Building metal shaders"
+                           VERBATIM)
+        add_custom_target(metalShaders DEPENDS "${MC_OUT}")
+        add_dependencies(fangame metalShaders)
+
+        # Enable Objective-C++ and add apple sources
+        enable_language(OBJCXX)
+
+        target_sources(fangame PRIVATE
+                       "${LOVEYLIB_APPLE_SOURCES}"
+                       "${CMAKE_SOURCE_DIR}/src/plat/apple_main.mm"
+                       "${CMAKE_SOURCE_DIR}/src/plat/apple_view.mm"
+                       "${CMAKE_SOURCE_DIR}/src/plat/apple_audio.mm")
+
+        # Link against required frameworks
+        target_link_libraries(fangame
+                              "-framework Cocoa"
+                              "-framework Metal"
+                              "-framework Quartz"
+                              "-framework AudioToolbox")
+
+        # main is defined in apple_main.mm on mac
+        set(INCLUDE_MAIN_CPP OFF)
+    else ()
+        #Linux
+        target_sources(fangame PRIVATE "${LOVEYLIB_POSIX_SOURCES}")
+
+        # Pthreads
+        find_package(Threads)
+        if (CMAKE_USE_PTHREADS_INIT)
+        set(LOVEYLIB_THREADS ON)
+        target_link_libraries(fangame Threads::Threads)
+        endif ()
+
+        # ALSA
+        find_package(ALSA REQUIRED)
+        if (NOT ALSA_FOUND)
+            message(FATAL_ERROR "Cannot find ALSA!")
+        endif ()
+        target_sources(fangame PRIVATE "src/plat/alsa_audio.cpp")
+        target_include_directories(fangame PRIVATE ${ALSA_INCLUDE_DIRS})
+        target_link_libraries(fangame ALSA::ALSA)
+        
+        # Xlib
+        find_package(X11)
+        if (X11_FOUND)
+            set(LOVEYLIB_XLIB ON)
+            target_sources(fangame PRIVATE "${LOVEYLIB_XLIB_SOURCES}")
+            target_include_directories(fangame PRIVATE ${X11_X11_INCLUDE_PATH})
+            target_link_libraries(fangame X11::X11)
+        
+            if (X11_XShm_FOUND)
+                set(LOVEYLIB_XSHM ON)
+                target_include_directories(fangame PRIVATE ${X11_XShm_INCLUDE_PATH})
+                target_link_libraries(fangame X11::Xext)
+            endif ()
+        
+            # OpenGL
+            find_package(OpenGL)
+            if (OPENGL_FOUND AND OpenGL_GLX_FOUND AND NOT LOVEYLIB_DISABLE_OPENGL)
+                set(LOVEYLIB_OPENGL ON)
+                target_include_directories(fangame PRIVATE
+                    ${OPENGL_INCLUDE_DIR}
+                    ${OPENGL_GLX_INCLUDE_DIR})
+                target_link_libraries(fangame OpenGL::GL OpenGL::GLX)
+            endif ()
         endif ()
     endif ()
 endif ()
@@ -205,7 +272,8 @@ endif ()
 
 set(LOVEYLIB_GNU OFF)
 if     (CMAKE_CXX_COMPILER_ID STREQUAL GNU OR
-        CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+        CMAKE_CXX_COMPILER_ID STREQUAL Clang OR
+        CMAKE_CXX_COMPILER_ID STREQUAL AppleClang)
     set(LOVEYLIB_GNU ON)
 endif ()
 
@@ -220,6 +288,11 @@ cmake_host_system_information(RESULT FANGAME_HAS_SSE2 QUERY HAS_SSE2)
 set(LOVEYLIB_SSE OFF)
 if (FANGAME_HAS_SSE AND FANGAME_HAS_SSE2)
     set(LOVEYLIB_SSE ON)
+endif ()
+
+# Only include main.cpp on platforms that don't define their own entrypoint
+if (INCLUDE_MAIN_CPP)
+    target_sources(fangame PRIVATE "${CMAKE_SOURCE_DIR}/src/main.cpp")
 endif ()
 
 # Make loveylib_config.h
