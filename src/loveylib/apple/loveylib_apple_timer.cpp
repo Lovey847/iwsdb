@@ -39,9 +39,17 @@
 #include "loveylib/assert.h"
 #include "loveylib/utils.h"
 
+static constexpr const u32 DELAY_MARGIN = 50;
+
 static mach_timebase_info_data_t s_timebaseInfo = {0, 0};
 
-#define IS_INITTED() (s_timebaseInfo.denom != 0)
+#define IS_INITTED() ((s_timebaseInfo.numer != 0) &&    \
+                      (s_timebaseInfo.denom != 0))
+
+static timestamp_t NanoToTime(u64 nanoseconds) {
+  return (nanoseconds * (timestamp_t)s_timebaseInfo.denom /
+          (timestamp_t)s_timebaseInfo.numer);
+}
 
 bfast InitTimer() {
   mach_timebase_info(&s_timebaseInfo);
@@ -52,7 +60,7 @@ bfast InitTimer() {
 
 timestamp_t GetTimerFrequency() {
   ASSERT(IS_INITTED());
-  return 1000000000 * s_timebaseInfo.numer / s_timebaseInfo.denom;
+  return NanoToTime(1000000000);
 }
 
 timestamp_t GetTime() {
@@ -65,5 +73,7 @@ void MicrosecondDelay(timestamp_t freq, u32 microseconds) {
   ASSERT(freq == GetTimerFrequency());
   (void)freq;
 
-  usleep(microseconds);
+  timestamp_t end = GetTime() + NanoToTime((u64)microseconds * (u64)1000);
+  if (microseconds > DELAY_MARGIN) usleep(microseconds - DELAY_MARGIN);
+  while (GetTime() < end);
 }
