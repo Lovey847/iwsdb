@@ -73,10 +73,14 @@ static id<MTLTexture> CreateDepthBuf(id<MTLDevice> device,
 static void RenderView(apple_view_t *view);
 static void ProcessFlagsChanged(input_state_t *state, NSEvent *evt);
 static input_field_t KeyCodeToField(u16 keyCode);
+static void CalcLetterBox(MTLViewport *output, NSUInteger width,
+                          NSUInteger height, f32 targetRatio);
 
 @implementation apple_view_t {
   id<MTLTexture> depthBuf;
   input_state_t input;
+
+  MTLViewport letterBoxPort;
 }
 
 @synthesize cmdQueue = cmdQueue;
@@ -137,6 +141,9 @@ static input_field_t KeyCodeToField(u16 keyCode);
     texture = CreateTexture(device);
 
     quadCount = 0;
+
+    CalcLetterBox(&letterBoxPort, frame.size.width, frame.size.height,
+                  (f32)GAME_WIDTH / (f32)GAME_HEIGHT);
   }
 
   return self;
@@ -155,10 +162,14 @@ static input_field_t KeyCodeToField(u16 keyCode);
   [metalLayer setDevice:device];
 
   // Resize depth buffer
-  depthBuf = CreateDepthBuf(device,
-                            (NSUInteger)[super frame].size.width,
-                            (NSUInteger)[super frame].size.height);
+  NSUInteger width = (NSUInteger)[super frame].size.width;
+  NSUInteger height = (NSUInteger)[super frame].size.height;
+  depthBuf = CreateDepthBuf(device, width, height);
   renderDescriptor.depthAttachment.texture = depthBuf;
+
+  // Recalculate viewport
+  CalcLetterBox(&letterBoxPort, width, height,
+                (f32)GAME_WIDTH / (f32)GAME_HEIGHT);
 }
 
 - (void)DrawQuads:(const rquad_t*)quads count:(iptr)count {
@@ -301,6 +312,10 @@ static input_field_t KeyCodeToField(u16 keyCode);
   renderDescriptor.colorAttachments[0].clearColor = color;
 }
 
+- (MTLViewport)GetLetterBoxViewport {
+  return letterBoxPort;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 //      Keyboard event handling
 
@@ -424,38 +439,6 @@ static id<MTLTexture> CreateDepthBuf(id<MTLDevice> device,
   return ret;
 }
 
-static void LetterBox(id<MTLRenderCommandEncoder> encoder, NSUInteger width,
-                      NSUInteger height, f32 targetRatio)
-{
-  f32 l, t, w, h;
-
-  l = 0.f;
-  t = 0.f;
-  w = (f32)width / targetRatio;
-  h = (f32)height;
-
-  if (h < w) {
-    l = (w - h) * 0.5f;
-    w = h;
-  } else if (h > w) {
-    t = (h - w) * 0.5f;
-    h = w;
-  }
-
-  l *= targetRatio;
-  w *= targetRatio;
-
-  MTLViewport view;
-  view.originX = l;
-  view.originY = t;
-  view.width = w;
-  view.height = h;
-  view.znear = 0.0;
-  view.zfar = 1.0;
-
-  [encoder setViewport:view];
-}
-
 static void RenderView(apple_view_t *view) {
   id<MTLCommandBuffer> cmdBuf = [view.cmdQueue commandBuffer];
   id<CAMetalDrawable> drawable = [view.metalLayer nextDrawable];
@@ -476,8 +459,7 @@ static void RenderView(apple_view_t *view) {
   [renderEncoder setFragmentTexture:view.texture
                             atIndex:0];
 
-  LetterBox(renderEncoder, drawable.texture.width, drawable.texture.height,
-            (f32)GAME_WIDTH / (f32)GAME_HEIGHT);
+  [renderEncoder setViewport:[view GetLetterBoxViewport]];
 
   [renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
                             indexCount:(6 * view.quadCount)
@@ -558,4 +540,33 @@ static input_field_t KeyCodeToField(u16 keyCode) {
   case 120: return INPUT_NEWGAMEBIT;
   default: return 0;
   }
+}
+
+static void CalcLetterBox(MTLViewport *output, NSUInteger width,
+                          NSUInteger height, f32 targetRatio)
+{
+  f32 l, t, w, h;
+
+  l = 0.f;
+  t = 0.f;
+  w = (f32)width / targetRatio;
+  h = (f32)height;
+
+  if (h < w) {
+    l = (w - h) * 0.5f;
+    w = h;
+  } else if (h > w) {
+    t = (h - w) * 0.5f;
+    h = w;
+  }
+
+  l *= targetRatio;
+  w *= targetRatio;
+
+  output->originX = l;
+  output->originY = t;
+  output->width = w;
+  output->height = h;
+  output->znear = 0.0;
+  output->zfar = 1.0;
 }

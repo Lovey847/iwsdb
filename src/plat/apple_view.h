@@ -61,6 +61,7 @@
 @property (nonatomic,assign,readwrite) iptr quadCount;
 @property (nonatomic,weak,readwrite) id<MTLBuffer> indices;
 
+- (void)UpdateRenderSize;
 - (void)DrawQuads:(const rquad_t*)quads count:(iptr)count;
 - (void)SetTexture:(const u32*)data left:(u32)left top:(u32)top
              right:(u32)right bottom:(u32)bottom;
@@ -69,7 +70,7 @@
 - (void)UpdateShift;
 - (input_t*)GetInput;
 - (void)SetClearColor:(MTLClearColor)color;
-- (void)UpdateRenderSize;
+- (MTLViewport)GetLetterBoxViewport;
 
 @end    //@interface apple_view_t
 
