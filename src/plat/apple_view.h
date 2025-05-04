@@ -69,6 +69,7 @@
 - (void)UpdateShift;
 - (input_t*)GetInput;
 - (void)SetClearColor:(MTLClearColor)color;
+- (void)UpdateRenderSize;
 
 @end    //@interface apple_view_t
 

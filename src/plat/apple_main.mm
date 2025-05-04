@@ -111,14 +111,15 @@ static void CreateMenu() {
   if (self) {
     NSRect winRect;
 
-    winRect = NSMakeRect(0, 0, 800, 608);
+    winRect = NSMakeRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     CenterRect(&winRect);
 
     win =
       [[NSWindow alloc] initWithContentRect:winRect
                                   styleMask:(NSWindowStyleMaskTitled |
                                              NSWindowStyleMaskClosable |
-                                             NSWindowStyleMaskMiniaturizable)
+                                             NSWindowStyleMaskMiniaturizable |
+                                             NSWindowStyleMaskResizable)
                                     backing:NSBackingStoreBuffered
                                       defer:NO];
     [win setTitle:@"I wanna slay the dragon of bangan"];
@@ -201,6 +202,10 @@ static void CreateMenu() {
 
 - (void)windowWillClose:(NSNotification*)notif {
   [NSApp terminate:self];
+}
+
+- (void)windowDidResize:(NSNotification*)notif {
+  [view UpdateRenderSize];
 }
 
 @end    //@implementation iwsdb_t

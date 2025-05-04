@@ -89,15 +89,12 @@ static input_field_t KeyCodeToField(u16 keyCode);
 @synthesize quadCount = quadCount;
 @synthesize indices = indices;
 
-- (CALayer*)makeBackingLayer {
-  return [CAMetalLayer layer];
-}
-
 - (nonnull instancetype)initWithFrame:(NSRect)frame {
   self = [super initWithFrame:frame];
   if (self) {
+    metalLayer = [CAMetalLayer layer];
+    [self setLayer:metalLayer];
     [self setWantsLayer:YES];
-    metalLayer = (CAMetalLayer*)[self layer];
 
     id<MTLDevice> device = MTLCreateSystemDefaultDevice();
     [metalLayer setDevice:device];
@@ -149,8 +146,19 @@ static input_field_t KeyCodeToField(u16 keyCode);
   [super dealloc];
 }
 
-- (void)drawRect:(NSRect)dirtyRect {
-  // Do nothing, as this is done by the Render method
+- (void)UpdateRenderSize {
+  id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+
+  // Create new metal layer
+  metalLayer = [CAMetalLayer layer];
+  [self setLayer:metalLayer];
+  [metalLayer setDevice:device];
+
+  // Resize depth buffer
+  depthBuf = CreateDepthBuf(device,
+                            (NSUInteger)[super frame].size.width,
+                            (NSUInteger)[super frame].size.height);
+  renderDescriptor.depthAttachment.texture = depthBuf;
 }
 
 - (void)DrawQuads:(const rquad_t*)quads count:(iptr)count {
@@ -330,6 +338,38 @@ static id<MTLTexture> CreateDepthBuf(id<MTLDevice> device,
   return ret;
 }
 
+static void LetterBox(id<MTLRenderCommandEncoder> encoder, NSUInteger width,
+                      NSUInteger height, f32 targetRatio)
+{
+  f32 l, t, w, h;
+
+  l = 0.f;
+  t = 0.f;
+  w = (f32)width / targetRatio;
+  h = (f32)height;
+
+  if (h < w) {
+    l = (w - h) * 0.5f;
+    w = h;
+  } else if (h > w) {
+    t = (h - w) * 0.5f;
+    h = w;
+  }
+
+  l *= targetRatio;
+  w *= targetRatio;
+
+  MTLViewport view;
+  view.originX = l;
+  view.originY = t;
+  view.width = w;
+  view.height = h;
+  view.znear = 0.0;
+  view.zfar = 1.0;
+
+  [encoder setViewport:view];
+}
+
 static void RenderView(apple_view_t *view) {
   id<MTLCommandBuffer> cmdBuf = [view.cmdQueue commandBuffer];
   id<CAMetalDrawable> drawable = [view.metalLayer nextDrawable];
@@ -349,6 +389,9 @@ static void RenderView(apple_view_t *view) {
                          atIndex:0];
   [renderEncoder setFragmentTexture:view.texture
                             atIndex:0];
+
+  LetterBox(renderEncoder, drawable.texture.width, drawable.texture.height,
+            (f32)GAME_WIDTH / (f32)GAME_HEIGHT);
 
   [renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
                             indexCount:(6 * view.quadCount)
