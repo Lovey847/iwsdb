@@ -165,9 +165,95 @@ static input_field_t KeyCodeToField(u16 keyCode);
   if (quadCount + count >= MAX_QUADS) count = MAX_QUADS - quadCount;
   if (count <= 0) return;
 
-  rquad_t *out = (rquad_t*)[vertices contents];
+  rquad_t *out = (rquad_t*)[vertices contents] + quadCount;
 
-  memcpy(out + quadCount, quads, sizeof(rquad_t) * count);
+  // Arrange the vertices where v[0] is the top left, v[1] is the top
+  // right, v[2] is the bottom left, and v[3] is the bottom right of the image
+  // in the texture page.
+  // For an explanation of why this is done, see CoordOffsets in
+  // plat/apple_shaders.metal.
+  // TODO: This is a lot of work, find a more efficient way to do this!
+  for (iptr i = 0; i < count; ++i) {
+    iptr tl, tr, bl, br;
+
+    tl = tr = bl = br = 0;
+    for (iptr j = 1; j < 4; ++j) {
+      if ((quads[i].v[j].data.s <= quads[i].v[tl].data.s) &&
+          (quads[i].v[j].data.t <= quads[i].v[tl].data.t))
+      {
+        tl = j;
+      }
+
+      if ((quads[i].v[j].data.s >= quads[i].v[tr].data.s) &&
+          (quads[i].v[j].data.t <= quads[i].v[tr].data.t))
+      {
+        tr = j;
+      }
+
+      if ((quads[i].v[j].data.s <= quads[i].v[bl].data.s) &&
+          (quads[i].v[j].data.t >= quads[i].v[bl].data.t))
+      {
+        bl = j;
+      }
+
+      if ((quads[i].v[j].data.s >= quads[i].v[br].data.s) &&
+          (quads[i].v[j].data.t >= quads[i].v[br].data.t))
+      {
+        br = j;
+      }
+    }
+
+    // If the quad doesn't represent a rectangle, don't setup corners
+    if ((quads[i].v[tl].data.s != quads[i].v[bl].data.s) ||
+        (quads[i].v[tl].data.t != quads[i].v[tr].data.t) ||
+        (quads[i].v[tr].data.s != quads[i].v[br].data.s) ||
+        (quads[i].v[bl].data.t != quads[i].v[br].data.t))
+    {
+      continue;
+    }
+
+    // Make sure all corner indices are unique
+    // If left and right corner indices match, increment tl until vertex
+    // with same Y coordinate is found, and do the same for bl
+    if (tl == tr) {
+      // If top and bottom corner indices also match, all corners have the same
+      // texture coordinate.
+      if (tl == bl) {
+        out[i] = quads[i];
+        continue;
+      }
+
+      // Increment tl until a vertex at the top is found
+      do {
+        tl = (tl + 1) & 3;
+      } while (quads[i].v[tl].data.t != quads[i].v[tr].data.t);
+
+      // Increment bl until a vertex at the bottom is found
+      do {
+        bl = (bl + 1) & 3;
+      } while (quads[i].v[bl].data.t != quads[i].v[br].data.t);
+    } else if (tl == bl) {
+      // If the top and bottom corner indices match, increment tl until vertex
+      // with same X coordinate is found, and do the same for tr
+      ASSERT(tl != tr);
+
+      // Increment tl until a vertex at the left is found
+      do {
+        tl = (tl + 1) & 3;
+      } while (quads[i].v[tl].data.s != quads[i].v[bl].data.s);
+
+      // Increment tr until a vertex at the right is found
+      do {
+        tr = (tr + 1) & 3;
+      } while (quads[i].v[tr].data.s != quads[i].v[br].data.s);
+    }
+
+    out[i].v[0] = quads[i].v[tl];
+    out[i].v[1] = quads[i].v[tr];
+    out[i].v[2] = quads[i].v[bl];
+    out[i].v[3] = quads[i].v[br];
+  }
+
   [vertices didModifyRange:NSMakeRange(sizeof(rquad_t) * quadCount,
                                        sizeof(rquad_t) * count)];
 

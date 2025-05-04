@@ -12,6 +12,18 @@ struct vertex_output_t {
   float2 coord;
 };
 
+// Metal sometimes grabs texels from outside the texture coordinates when
+// drawing scaled images with nearest neighbor filtering.  The correct solution
+// would be to pad the edges of the images in the pages, however that's too big
+// a change for a port so instead the corner tex coords will be slightly nudged
+// into the image.
+static constant float2 CoordOffset[4] = {
+  float2(0.01, 0.01),
+  float2(-0.01, 0.01),
+  float2(0.01, -0.01),
+  float2(-0.01, -0.01)
+};
+
 vertex vertex_output_t VertexShader(uint vertexID [[vertex_id]],
                                     constant vertex_t *vertices [[buffer(0)]])
 {
@@ -22,6 +34,7 @@ vertex vertex_output_t VertexShader(uint vertexID [[vertex_id]],
   out.clipSpacePos.w = 1.0;
 
   out.coord = float2(vertices[vertexID].coord);
+  out.coord += CoordOffset[vertexID & 3];
 
   return out;
 }
