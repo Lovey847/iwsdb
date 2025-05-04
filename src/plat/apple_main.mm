@@ -64,6 +64,35 @@ static void CenterRect(NSRect *rect) {
     scrFrame.origin.y + (scrFrame.size.height - rect->size.height) * 0.5;
 }
 
+static void CreateMenu() {
+  NSMenu *mainMenu;
+  NSMenuItem *menuItem;
+  NSMenu *appMenu;
+
+  mainMenu = [[[NSMenu alloc] initWithTitle:@"MainMenu"] autorelease];
+  appMenu = [[[NSMenu alloc] initWithTitle:@"AppMenu"] autorelease];
+
+  menuItem = [appMenu addItemWithTitle:@"About I wanna slay the dragon of "
+                                        "bangan"
+                                action:@selector(orderFrontStandardAboutPanel:)
+                         keyEquivalent:@""];
+  [menuItem setTarget:NSApp];
+
+  [appMenu addItem:[NSMenuItem separatorItem]];
+
+  menuItem = [appMenu addItemWithTitle:@"Quit I wanna slay the dragon of bangan"
+                                action:@selector(terminate:)
+                         keyEquivalent:@"q"];
+  [menuItem setTarget:NSApp];
+
+  menuItem = [mainMenu addItemWithTitle:@"I wanna slay the dragon of bangan"
+                                 action:nil
+                          keyEquivalent:@""];
+  [mainMenu setSubmenu:appMenu forItem:menuItem];
+
+  [NSApp setMainMenu:mainMenu];
+}
+
 @interface iwsdb_t : NSObject<NSApplicationDelegate, NSWindowDelegate> {
   NSWindow *win;
   apple_view_t *view;
@@ -143,6 +172,7 @@ static void CenterRect(NSRect *rect) {
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification*)notif {
+  CreateMenu();
   [win makeKeyAndOrderFront:self];
 }
 
