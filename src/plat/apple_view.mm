@@ -499,7 +499,14 @@ static void RenderView(apple_view_t *view) {
   metalViewport.znear = 0.0;
   metalViewport.zfar = 1.0;
 
+  MTLScissorRect metalScissor;
+  metalScissor.x = viewport.l;
+  metalScissor.y = viewport.t;
+  metalScissor.width = viewport.w;
+  metalScissor.height = viewport.h;
+
   [renderEncoder setViewport:metalViewport];
+  [renderEncoder setScissorRect:metalScissor];
 
   [renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
                             indexCount:(6 * view.quadCount)
