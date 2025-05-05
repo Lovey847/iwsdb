@@ -78,7 +78,7 @@ static void RenderView(apple_view_t *view);
 static void ProcessFlagsChanged(input_state_t *state, NSEvent *evt);
 static input_field_t KeyCodeToField(u16 keyCode);
 static void SetClearColor(id<MTLTexture> texture, f32 r, f32 g, f32 b);
-static void CalcLetterBox(MTLViewport *output, NSUInteger width,
+static void CalcLetterBox(apple_viewport_t *viewport, NSUInteger width,
                           NSUInteger height, f32 targetRatio);
 
 static constexpr const rquad_t S_ClearQuad = {{
@@ -94,7 +94,7 @@ static constexpr const rquad_t S_ClearQuad = {{
 
   f32 clearColR, clearColG, clearColB;
 
-  MTLViewport letterBoxPort;
+  apple_viewport_t viewport;
 }
 
 @synthesize cmdQueue = cmdQueue;
@@ -159,7 +159,7 @@ static constexpr const rquad_t S_ClearQuad = {{
     clearColR = clearColG = clearColB = 0.f;
     SetClearColor(texture, 0.f, 0.f, 0.f);
 
-    CalcLetterBox(&letterBoxPort, frame.size.width, frame.size.height,
+    CalcLetterBox(&viewport, frame.size.width, frame.size.height,
                   (f32)GAME_WIDTH / (f32)GAME_HEIGHT);
   }
 
@@ -185,7 +185,7 @@ static constexpr const rquad_t S_ClearQuad = {{
   renderDescriptor.depthAttachment.texture = depthBuf;
 
   // Recalculate viewport
-  CalcLetterBox(&letterBoxPort, width, height,
+  CalcLetterBox(&viewport, width, height,
                 (f32)GAME_WIDTH / (f32)GAME_HEIGHT);
 }
 
@@ -340,8 +340,8 @@ static constexpr const rquad_t S_ClearQuad = {{
   SetClearColor(texture, clearColR, clearColG, clearColB);
 }
 
-- (MTLViewport)GetLetterBoxViewport {
-  return letterBoxPort;
+- (apple_viewport_t)GetViewport {
+  return viewport;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -489,7 +489,17 @@ static void RenderView(apple_view_t *view) {
   [renderEncoder setFragmentTexture:view.texture
                             atIndex:0];
 
-  [renderEncoder setViewport:[view GetLetterBoxViewport]];
+  apple_viewport_t viewport = [view GetViewport];
+
+  MTLViewport metalViewport;
+  metalViewport.originX = viewport.l;
+  metalViewport.originY = viewport.t;
+  metalViewport.width = viewport.w;
+  metalViewport.height = viewport.h;
+  metalViewport.znear = 0.0;
+  metalViewport.zfar = 1.0;
+
+  [renderEncoder setViewport:metalViewport];
 
   [renderEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
                             indexCount:(6 * view.quadCount)
@@ -582,7 +592,7 @@ static void SetClearColor(id<MTLTexture> texture, f32 r, f32 g, f32 b) {
              bytesPerRow:4];
 }
 
-static void CalcLetterBox(MTLViewport *output, NSUInteger width,
+static void CalcLetterBox(apple_viewport_t *output, NSUInteger width,
                           NSUInteger height, f32 targetRatio)
 {
   f32 l, t, w, h;
@@ -603,10 +613,8 @@ static void CalcLetterBox(MTLViewport *output, NSUInteger width,
   l *= targetRatio;
   w *= targetRatio;
 
-  output->originX = l;
-  output->originY = t;
-  output->width = w;
-  output->height = h;
-  output->znear = 0.0;
-  output->zfar = 1.0;
+  output->l = (u32)l;
+  output->t = (u32)t;
+  output->w = (u32)w;
+  output->h = (u32)h;
 }

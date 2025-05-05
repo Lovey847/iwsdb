@@ -39,6 +39,11 @@
 #import <QuartzCore/CAMetalLayer.h>
 #import <Metal/Metal.h>
 
+struct apple_viewport_t {
+  u32 l, t;     // Left and top
+  u32 w, h;     // Width and height
+};
+
 @interface apple_view_t : NSView {
   id<MTLCommandQueue> cmdQueue;
   CAMetalLayer *metalLayer;
@@ -70,7 +75,7 @@
 - (void)UpdateShift;
 - (input_t*)GetInput;
 - (void)SetClearColor:(MTLClearColor)color;
-- (MTLViewport)GetLetterBoxViewport;
+- (apple_viewport_t)GetViewport;
 
 @end    //@interface apple_view_t
 
