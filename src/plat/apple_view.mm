@@ -52,6 +52,10 @@
 #define MODFLAG_LEFT 2
 #define MODFLAG_RIGHT 4
 
+// Texture coordinate of clear color
+#define CLRCOL_COORD_X 2047
+#define CLRCOL_COORD_Y 2047
+
 struct input_state_t {
   input_t input;
 
@@ -73,12 +77,22 @@ static id<MTLTexture> CreateDepthBuf(id<MTLDevice> device,
 static void RenderView(apple_view_t *view);
 static void ProcessFlagsChanged(input_state_t *state, NSEvent *evt);
 static input_field_t KeyCodeToField(u16 keyCode);
+static void SetClearColor(id<MTLTexture> texture, f32 r, f32 g, f32 b);
 static void CalcLetterBox(MTLViewport *output, NSUInteger width,
                           NSUInteger height, f32 targetRatio);
+
+static constexpr const rquad_t S_ClearQuad = {{
+    {{{-1.f, 1.f, 0.9999999f, CLRCOL_COORD_X, CLRCOL_COORD_Y}}},
+    {{{1.f, 1.f, 0.9999999f, CLRCOL_COORD_X + 1, CLRCOL_COORD_Y}}},
+    {{{-1.f, -1.f, 0.9999999f, CLRCOL_COORD_X, CLRCOL_COORD_Y + 1}}},
+    {{{1.f, -1.f, 0.9999999f, CLRCOL_COORD_X + 1, CLRCOL_COORD_Y + 1}}}
+  }};
 
 @implementation apple_view_t {
   id<MTLTexture> depthBuf;
   input_state_t input;
+
+  f32 clearColR, clearColG, clearColB;
 
   MTLViewport letterBoxPort;
 }
@@ -141,6 +155,9 @@ static void CalcLetterBox(MTLViewport *output, NSUInteger width,
     texture = CreateTexture(device);
 
     quadCount = 0;
+
+    clearColR = clearColG = clearColB = 0.f;
+    SetClearColor(texture, 0.f, 0.f, 0.f);
 
     CalcLetterBox(&letterBoxPort, frame.size.width, frame.size.height,
                   (f32)GAME_WIDTH / (f32)GAME_HEIGHT);
@@ -278,6 +295,13 @@ static void CalcLetterBox(MTLViewport *output, NSUInteger width,
              mipmapLevel:0
                withBytes:(unsigned char*)data
              bytesPerRow:4 * (right - left)];
+
+  // If this region contains the clear color, reset the clear color pixel
+  if (((u32)(CLRCOL_COORD_X - left) < (u32)(right - left)) &&
+      ((u32)(CLRCOL_COORD_Y - top) < (u32)(bottom - top)))
+  {
+    SetClearColor(texture, clearColR, clearColG, clearColB);
+  }
 }
 
 - (void)Render {
@@ -309,7 +333,11 @@ static void CalcLetterBox(MTLViewport *output, NSUInteger width,
 }
 
 - (void)SetClearColor:(MTLClearColor)color {
-  renderDescriptor.colorAttachments[0].clearColor = color;
+  clearColR = color.red;
+  clearColG = color.green;
+  clearColB = color.blue;
+
+  SetClearColor(texture, clearColR, clearColG, clearColB);
 }
 
 - (MTLViewport)GetLetterBoxViewport {
@@ -440,6 +468,8 @@ static id<MTLTexture> CreateDepthBuf(id<MTLDevice> device,
 }
 
 static void RenderView(apple_view_t *view) {
+  [view DrawQuads:&S_ClearQuad count:1];
+
   id<MTLCommandBuffer> cmdBuf = [view.cmdQueue commandBuffer];
   id<CAMetalDrawable> drawable = [view.metalLayer nextDrawable];
 
@@ -540,6 +570,16 @@ static input_field_t KeyCodeToField(u16 keyCode) {
   case 120: return INPUT_NEWGAMEBIT;
   default: return 0;
   }
+}
+
+static void SetClearColor(id<MTLTexture> texture, f32 r, f32 g, f32 b) {
+  u32 c = (0xff000000u | ((u32)(r * 255.f) << 16) | ((u32)(g * 255.f) << 8) |
+           (u32)(b * 255.f));
+
+  [texture replaceRegion:MTLRegionMake2D(CLRCOL_COORD_X, CLRCOL_COORD_Y, 1, 1)
+             mipmapLevel:0
+               withBytes:&c
+             bytesPerRow:4];
 }
 
 static void CalcLetterBox(MTLViewport *output, NSUInteger width,
