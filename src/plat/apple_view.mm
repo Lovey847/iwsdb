@@ -80,6 +80,7 @@ static input_field_t KeyCodeToField(u16 keyCode);
 static void SetClearColor(id<MTLTexture> texture, f32 r, f32 g, f32 b);
 static void CalcLetterBox(apple_viewport_t *viewport, NSUInteger width,
                           NSUInteger height, f32 targetRatio);
+static void ProcessQuad(const rquad_t *input, rquad_t *output);
 
 static constexpr const rquad_t S_ClearQuad = {{
     {{{-1.f, 1.f, 0.9999999f, CLRCOL_COORD_X, CLRCOL_COORD_Y}}},
@@ -195,92 +196,7 @@ static constexpr const rquad_t S_ClearQuad = {{
 
   rquad_t *out = (rquad_t*)[vertices contents] + quadCount;
 
-  // Arrange the vertices where v[0] is the top left, v[1] is the top
-  // right, v[2] is the bottom left, and v[3] is the bottom right of the image
-  // in the texture page.
-  // For an explanation of why this is done, see CoordOffsets in
-  // plat/apple_shaders.metal.
-  // TODO: This is a lot of work, find a more efficient way to do this!
-  for (iptr i = 0; i < count; ++i) {
-    iptr tl, tr, bl, br;
-
-    tl = tr = bl = br = 0;
-    for (iptr j = 1; j < 4; ++j) {
-      if ((quads[i].v[j].data.s <= quads[i].v[tl].data.s) &&
-          (quads[i].v[j].data.t <= quads[i].v[tl].data.t))
-      {
-        tl = j;
-      }
-
-      if ((quads[i].v[j].data.s >= quads[i].v[tr].data.s) &&
-          (quads[i].v[j].data.t <= quads[i].v[tr].data.t))
-      {
-        tr = j;
-      }
-
-      if ((quads[i].v[j].data.s <= quads[i].v[bl].data.s) &&
-          (quads[i].v[j].data.t >= quads[i].v[bl].data.t))
-      {
-        bl = j;
-      }
-
-      if ((quads[i].v[j].data.s >= quads[i].v[br].data.s) &&
-          (quads[i].v[j].data.t >= quads[i].v[br].data.t))
-      {
-        br = j;
-      }
-    }
-
-    // If the quad doesn't represent a rectangle, don't setup corners
-    if ((quads[i].v[tl].data.s != quads[i].v[bl].data.s) ||
-        (quads[i].v[tl].data.t != quads[i].v[tr].data.t) ||
-        (quads[i].v[tr].data.s != quads[i].v[br].data.s) ||
-        (quads[i].v[bl].data.t != quads[i].v[br].data.t))
-    {
-      continue;
-    }
-
-    // Make sure all corner indices are unique
-    // If left and right corner indices match, increment tl until vertex
-    // with same Y coordinate is found, and do the same for bl
-    if (tl == tr) {
-      // If top and bottom corner indices also match, all corners have the same
-      // texture coordinate.
-      if (tl == bl) {
-        out[i] = quads[i];
-        continue;
-      }
-
-      // Increment tl until a vertex at the top is found
-      do {
-        tl = (tl + 1) & 3;
-      } while (quads[i].v[tl].data.t != quads[i].v[tr].data.t);
-
-      // Increment bl until a vertex at the bottom is found
-      do {
-        bl = (bl + 1) & 3;
-      } while (quads[i].v[bl].data.t != quads[i].v[br].data.t);
-    } else if (tl == bl) {
-      // If the top and bottom corner indices match, increment tl until vertex
-      // with same X coordinate is found, and do the same for tr
-      ASSERT(tl != tr);
-
-      // Increment tl until a vertex at the left is found
-      do {
-        tl = (tl + 1) & 3;
-      } while (quads[i].v[tl].data.s != quads[i].v[bl].data.s);
-
-      // Increment tr until a vertex at the right is found
-      do {
-        tr = (tr + 1) & 3;
-      } while (quads[i].v[tr].data.s != quads[i].v[br].data.s);
-    }
-
-    out[i].v[0] = quads[i].v[tl];
-    out[i].v[1] = quads[i].v[tr];
-    out[i].v[2] = quads[i].v[bl];
-    out[i].v[3] = quads[i].v[br];
-  }
+  for (iptr i = 0; i < count; ++i) ProcessQuad(quads + i, out + i);
 
   [vertices didModifyRange:NSMakeRange(sizeof(rquad_t) * quadCount,
                                        sizeof(rquad_t) * count)];
@@ -624,4 +540,51 @@ static void CalcLetterBox(apple_viewport_t *output, NSUInteger width,
   output->t = (u32)t;
   output->w = (u32)w;
   output->h = (u32)h;
+}
+
+static void ProcessQuad(const rquad_t *input, rquad_t *output) {
+  const vertex_t *v = input->v;
+  vertex_t *ov = output->v;
+
+  // Arrange the vertices where v[0] is the top left, v[1] is the top right,
+  // v[2] is the bottom left, and v[3] is the bottom right of the image
+  // in the texture page.
+  // For an explanation of why this is done, see CoordOffsets in
+  // src/plat/apple_shaders.metal.
+  iptr tl = 0, tr = 1, bl = 2, br = 3;
+
+  // 2 possible orders (row major or column major),
+  // 4 possible directions (going down right, going down left, going up right,
+  // going up left)
+
+  // If the order is column major, swizzle corners appropriately
+  if (v[0].data.s == v[1].data.s) {
+    tr = 2;
+    bl = 1;
+  }
+
+  // If the rectangle is pointing left, swap tl&tr and bl&br
+  if (v[tl].data.s > v[tr].data.s) {
+    iptr tmp = tl;
+    tl = tr;
+    tr = tmp;
+    tmp = bl;
+    bl = br;
+    br = tmp;
+  }
+
+  // If the rectangle is pointing up, swap tl&bl and tr&br
+  if (v[tl].data.t > v[bl].data.t) {
+    iptr tmp = tl;
+    tl = bl;
+    bl = tmp;
+    tmp = tr;
+    tr = br;
+    br = tmp;
+  }
+
+  ov[0] = v[tl];
+  ov[1] = v[tr];
+  ov[2] = v[bl];
+  ov[3] = v[br];
 }
