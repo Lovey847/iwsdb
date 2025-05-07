@@ -39,16 +39,24 @@
 #import <Cocoa/Cocoa.h>
 #import <AudioToolbox/AudioQueue.h>
 
+// Size of audio buffers for audio queue
 static constexpr const iptr AUDIO_BUF_SIZE = 4096;
+// Number of audio buffers in audio queue
 static constexpr const int NUM_BUFFERS = 2;
 
+// Size of sound sample buffer
 static constexpr const iptr SOUND_BUF_SIZE = 6873504;
 
+// Audio data mutex
 static NSLock *s_audioLock;
+// Audio queue
 static AudioQueueRef s_audioQueue;
+// Audio queue buffers
 static AudioQueueBufferRef s_audioBuffers[NUM_BUFFERS];
 
+// Whether or not bgm is playing
 static bfast s_bgmPlaying = false;
+// Filename of bgm that's playing
 static char s_bgmName[64];
 
 struct sound_channel {
@@ -59,13 +67,21 @@ struct sound_channel {
   inline bptr playing() const {return (bptr)p;}
 };
 
+// Sound array, contains the initial state for a sound channel that plays this
+// sound.
 static sound_channel s_sounds[SND_COUNT];
+// Sound sample buffer
 static audio_frame_t *s_soundBuf;
 
+// Sound channel array.  All of these are mixed into the audio output stream
+// along with the BGM.  When PlaySound is called, a sound channel is allocated
+// to play the specified sound, and a handle to that sound channel is given
+// to whatever called PlaySound.
 static constexpr const uptr SND_CHANNELS = 16;
 static sound_channel s_channels[SND_CHANNELS];
 
 // Load sounds into s_sounds and s_soundBuf
+// Called with s_audioLock locked
 static void LoadSounds() {
   uptr soundBufSize = SOUND_BUF_SIZE;
   audio_frame_t *p;
@@ -98,6 +114,8 @@ static void LoadSounds() {
   LOG_INFO(FMT.s("Sound buffer size: ").i(p-s_soundBuf).s(" frames").STR);
 }
 
+// Mix BGM and sound channels into samples
+// Called with s_audioLock locked
 static void MixAudio(i16 *samples, uptr bufSize) {
   // Write BGM
   if (s_bgmPlaying) ReadADPCM((audio_frame_t*)samples, bufSize);
@@ -116,6 +134,7 @@ static void MixAudio(i16 *samples, uptr bufSize) {
         left = samples[2*j] + s_channels[i].p->left;
         right = samples[2*j+1] + s_channels[i].p->right;
 
+        // Clamp left and right channels
         if (left > 32767) left = 32767;
         else if (left < -32768) left = -32768;
 
@@ -131,6 +150,8 @@ static void MixAudio(i16 *samples, uptr bufSize) {
   }
 }
 
+// Audio output callback for audio queue
+// Called in a separate thread after queue reads buf into the output stream
 static void QueueOutputCallback(void *data, AudioQueueRef queue,
 				AudioQueueBufferRef buf)
 {
@@ -143,13 +164,17 @@ static void QueueOutputCallback(void *data, AudioQueueRef queue,
   samples = (i16*)buf->mAudioData;
 
   buf->mAudioDataByteSize = buf->mAudioDataBytesCapacity;
+
+  // Mix sound channels into buffer
   MixAudio(samples, buf->mAudioDataByteSize / 4);
 
+  // Queue buffer for playback in audio queue
   AudioQueueEnqueueBuffer(queue, buf, 0, NULL);
 
   [s_audioLock unlock];
 }
 
+// Initialize audio queue buffer
 static AudioQueueBufferRef InitBuffer(AudioQueueRef queue) {
   OSStatus res;
   AudioQueueBufferRef ret;
@@ -157,6 +182,7 @@ static AudioQueueBufferRef InitBuffer(AudioQueueRef queue) {
   res = AudioQueueAllocateBuffer(queue, AUDIO_BUF_SIZE, &ret);
   if (res < 0) return nil;
 
+  // Queue initial buffer for playback
   ret->mAudioDataByteSize = ret->mAudioDataBytesCapacity;
   memset(ret->mAudioData, 0, ret->mAudioDataByteSize);
 
@@ -169,6 +195,7 @@ static AudioQueueBufferRef InitBuffer(AudioQueueRef queue) {
   return ret;
 }
 
+// Initialize and start audio queue
 void InitAudio() {
   OSStatus res;
   AudioStreamBasicDescription desc;
@@ -191,10 +218,12 @@ void InitAudio() {
 
   [s_audioLock lock];
 
+  // Create audio queue
   res = AudioQueueNewOutput(&desc, QueueOutputCallback, NULL,
 			    nil, NULL, 0, &s_audioQueue);
   if (res < 0) LOG_ERROR("Couldn't initialize audio mixer!");
 
+  // Initialize all buffers
   for (i = 0; i < NUM_BUFFERS; ++i) {
     s_audioBuffers[i] = InitBuffer(s_audioQueue);
 
