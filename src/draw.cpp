@@ -366,6 +366,8 @@ static void OrphanVertBuf() {
 
 // Create OpenGL window
 void CreateWindow(canvas_t *out, const char *title) {
+  // Apple usees its own window implementation, so all CreateWindow has to do is
+  // initialize the renderer.
 #ifndef APPLE_RENDER
   if (!CreateOpenGLCanvas(out, title, GAME_WIDTH, GAME_HEIGHT))
     LOG_ERROR("Cannot create OpenGL canvas!");
@@ -410,6 +412,8 @@ void CreateWindow(canvas_t *out, const char *title) {
 
 // Close OpenGL window, freeing any OpenGL resources along the way
 void CloseWindow(canvas_t *c) {
+  // Apple uses its own window implementation, so all CloseWindow has to do is
+  // shut down the renderer.
 #ifndef APPLE_RENDER
   GLF(DeleteTextures(1, &s_texture));
   GLF(BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0));
@@ -646,6 +650,6 @@ void RenderGame() {
     s_vertCount = 0;
   }
 #else
-  // Handled by platform layer
+  // On apple, the game is rendered by RenderView in plat/apple_view.mm
 #endif
 }
