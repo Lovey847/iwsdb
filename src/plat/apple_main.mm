@@ -45,6 +45,7 @@
 
 #import <Cocoa/Cocoa.h>
 
+// Reference to the view in 
 static apple_view_t *s_view;
 static bfast s_running = true;
 
@@ -279,6 +280,8 @@ int main() {
         MicrosecondDelay(g_timerFrequency, 1000000 / GAME_FPS - (end - start));
       }
     } while (s_running);
+
+    s_view = nil;
   }
 
   return 0;
