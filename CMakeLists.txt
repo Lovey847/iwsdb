@@ -227,7 +227,7 @@ if (UNIX)
         target_sources(fangame PRIVATE "src/plat/alsa_audio.cpp")
         target_include_directories(fangame PRIVATE ${ALSA_INCLUDE_DIRS})
         target_link_libraries(fangame ALSA::ALSA)
-        
+
         # Xlib
         find_package(X11)
         if (X11_FOUND)
@@ -235,13 +235,13 @@ if (UNIX)
             target_sources(fangame PRIVATE "${LOVEYLIB_XLIB_SOURCES}")
             target_include_directories(fangame PRIVATE ${X11_X11_INCLUDE_PATH})
             target_link_libraries(fangame X11::X11)
-        
+
             if (X11_XShm_FOUND)
                 set(LOVEYLIB_XSHM ON)
                 target_include_directories(fangame PRIVATE ${X11_XShm_INCLUDE_PATH})
                 target_link_libraries(fangame X11::Xext)
             endif ()
-        
+
             # OpenGL
             find_package(OpenGL)
             if (OPENGL_FOUND AND OpenGL_GLX_FOUND AND NOT LOVEYLIB_DISABLE_OPENGL)
