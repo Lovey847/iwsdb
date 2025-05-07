@@ -162,7 +162,7 @@ static void CreateMenu() {
               .s("/data\" exists?").STR);
   }
 
-  // Error out of data isn't a directory
+  // Error out if data isn't a directory
   if (!(dataDirStat.st_mode & S_IFDIR)) {
     LOG_ERROR(FMT.s("\"").s(dataDir).s("/data\" isn't a directory!").STR);
   }
