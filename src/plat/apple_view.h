@@ -44,18 +44,28 @@ struct apple_viewport_t {
   u32 w, h;     // Width and height
 };
 
+// Layer-hosting window view, handles keyboard events and rendering.
 @interface apple_view_t : NSView {
   id<MTLCommandQueue> cmdQueue;
+  // Layer hosted by view
   CAMetalLayer *metalLayer;
+  // Render pass descriptor, contains framebuffer properties
   MTLRenderPassDescriptor *renderDescriptor;
+  // Pipeline state, contains shaders and framebuffer pixel formats
   id<MTLRenderPipelineState> pipelineState;
+  // Depth buffer state, contains depth test calculation method
   id<MTLDepthStencilState> depthState;
+  // Vertex buffer
   id<MTLBuffer> vertices;
+  // Internal 2048x2048 texture
   id<MTLTexture> texture;
+  // Current number of quads in vertex buffer
   iptr quadCount;
+  // Index buffer, constant buffer containing "0,1,2,3,2,1,4,5,6,7,6,5,..."
   id<MTLBuffer> indices;
 }
 
+// Make all properties public
 @property (nonatomic,weak,readwrite) id<MTLCommandQueue> cmdQueue;
 @property (nonatomic,weak,readwrite) CAMetalLayer *metalLayer;
 @property (nonatomic,weak,readwrite) MTLRenderPassDescriptor *renderDescriptor;
@@ -66,15 +76,24 @@ struct apple_viewport_t {
 @property (nonatomic,assign,readwrite) iptr quadCount;
 @property (nonatomic,weak,readwrite) id<MTLBuffer> indices;
 
+// Updates the size the game is rendered at to the size of the view
 - (void)UpdateRenderSize;
+// Renders quads
 - (void)DrawQuads:(const rquad_t*)quads count:(iptr)count;
+// Set portion of internal 2048x2048 texture
 - (void)SetTexture:(const u32*)data left:(u32)left top:(u32)top
              right:(u32)right bottom:(u32)bottom;
+// Render into view
 - (void)Render;
+// Update which keys are held down
 - (void)UpdateDown;
+// Update shift state
 - (void)UpdateShift;
+// Get input data from window
 - (input_t*)GetInput;
+// Set renderer clear color
 - (void)SetClearColor:(MTLClearColor)color;
+// Get current viewport
 - (apple_viewport_t)GetViewport;
 
 @end    //@interface apple_view_t
