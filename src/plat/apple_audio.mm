@@ -98,6 +98,12 @@ static void LoadSounds() {
     // Read data into buffer and close file
     uptr frames = OpenADPCM(G_SoundNames[i]);
     if (!frames) LOG_ERROR(FMT.s("Couldn't open ").s(G_SoundNames[i]).s("!").STR);
+
+    if (p + frames > (audio_frame_t*)((u8*)s_soundBuf + SOUND_BUF_SIZE)) {
+      LOG_ERROR(FMT.s("Sound sample buffer overflow when loading ")
+                .s(G_SoundNames[i]).s("!").STR);
+    }
+
     ReadADPCM(p, frames);
     CloseADPCM();
 
