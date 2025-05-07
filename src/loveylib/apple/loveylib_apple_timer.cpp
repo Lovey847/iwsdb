@@ -39,10 +39,16 @@
 #include "loveylib/assert.h"
 #include "loveylib/utils.h"
 
+// Delay margin in microseconds for usleep
 static constexpr const u32 DELAY_MARGIN = 50;
 
+// Timebase info, contains a fraction that's used to convert the time returned
+// by mach_absolute_time() to nanoseconds.
+// Nanosecond = Time unit * numer / denom
+// Time unit = Nanosecond * denom / numer
 static mach_timebase_info_data_t s_timebaseInfo = {0, 0};
 
+// Check if apple timer is initialized
 #define IS_INITTED() ((s_timebaseInfo.numer != 0) &&    \
                       (s_timebaseInfo.denom != 0))
 
@@ -60,6 +66,9 @@ bfast InitTimer() {
 
 timestamp_t GetTimerFrequency() {
   ASSERT(IS_INITTED());
+
+  // Convert a second in nanoseconds to time units to get the number of time
+  // units in a second
   return NanoToTime(1000000000);
 }
 
@@ -73,6 +82,8 @@ void MicrosecondDelay(timestamp_t freq, u32 microseconds) {
   ASSERT(freq == GetTimerFrequency());
   (void)freq;
 
+  // usleep for slightly less than the requested time, then busy wait the rest
+  // of it.  This givds a more precise delay than using usleep on its own.
   timestamp_t end = GetTime() + NanoToTime((u64)microseconds * (u64)1000);
   if (microseconds > DELAY_MARGIN) usleep(microseconds - DELAY_MARGIN);
   while (GetTime() < end);
