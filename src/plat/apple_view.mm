@@ -318,12 +318,16 @@ static constexpr const rquad_t S_ClearQuad = {{
 
 // A key other than shift was pressed
 - (void)keyDown:(NSEvent*)evt {
+  if ([evt isARepeat]) return;
+
   // Close the application if the user pressed escape
   if ([evt keyCode] == MACKEY_ESCAPE) [NSApp terminate:self];
   else input.input.pressed |= KeyCodeToField([evt keyCode]);
 }
 
 - (void)keyUp:(NSEvent*)evt {
+  if ([evt isARepeat]) return;
+
   input.input.released |= KeyCodeToField([evt keyCode]);
 }
 
