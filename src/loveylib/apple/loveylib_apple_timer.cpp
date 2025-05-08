@@ -26,77 +26,65 @@
  *
  * This file is part of LoveyLib
  *
- * src/loveylib/posix/loveylib_posix_timer.cpp:
- *  POSIX timer implementation
+ * src/loveylib/apple/loveylib_apple_timer.cpp:
+ *  Apple timer implementation
  *
  ************************************************************/
 
-#include "loveylib_config.h"
-
-#ifdef LOVEYLIB_APPLE
-
-#error "Apple timer routines are implemented in loveylib_apple_timer.cpp"
-
-#else
-
-// For clock_gettime and nanosleep
-#define _POSIX_C_SOURCE 199309L
+#include <mach/mach_time.h>
+#include <mach/mach.h>
+#include <unistd.h>
 
 #include "loveylib/timer.h"
 #include "loveylib/assert.h"
 #include "loveylib/utils.h"
-#include <time.h>
 
-// Make sure the user calls InitTimer before using
-// timer functions in the debug build
-IN_DEBUG (
+// Delay margin in microseconds for usleep
+static constexpr const u32 DELAY_MARGIN = 50;
 
-static bfast initted = false;
-static inline void Init() {
-  initted = true;
+// Timebase info, contains a fraction that's used to convert the time returned
+// by mach_absolute_time() to nanoseconds.
+// Nanosecond = Time unit * numer / denom
+// Time unit = Nanosecond * denom / numer
+static mach_timebase_info_data_t s_timebaseInfo = {0, 0};
+
+// Check if apple timer is initialized
+#define IS_INITTED() ((s_timebaseInfo.numer != 0) &&    \
+                      (s_timebaseInfo.denom != 0))
+
+static timestamp_t NanoToTime(u64 nanoseconds) {
+  return (nanoseconds * (timestamp_t)s_timebaseInfo.denom /
+          (timestamp_t)s_timebaseInfo.numer);
 }
 
-)
-
-// In the release build, don't bother
-IN_RELEASE (
-
-static constexpr const bfast initted = true;
-static inline void Init() {}
-
-)
-
 bfast InitTimer() {
-  // Don't initialize timer twice!
-  ASSERT(!initted);
+  mach_timebase_info(&s_timebaseInfo);
+  ASSERT(IS_INITTED());
 
-  // No initialization done on posix, but we
-  // need to make sure it's called
-  Init();
   return true;
 }
 
 timestamp_t GetTimerFrequency() {
-  ASSERT(initted);
-  return 1000000000;
+  ASSERT(IS_INITTED());
+
+  // Convert a second in nanoseconds to time units to get the number of time
+  // units in a second
+  return NanoToTime(1000000000);
 }
 
 timestamp_t GetTime() {
-  ASSERT(initted);
-
-  struct timespec ret;
-
-  clock_gettime(CLOCK_MONOTONIC_RAW, &ret);
-  return ret.tv_sec*1000000000 + ret.tv_nsec;
+  ASSERT(IS_INITTED());
+  return mach_absolute_time();
 }
 
 void MicrosecondDelay(timestamp_t freq, u32 microseconds) {
-  ASSERT(initted);
+  ASSERT(IS_INITTED());
+  ASSERT(freq == GetTimerFrequency());
+  (void)freq;
 
-  (void)freq; // Timer frequency is constant in POSIX
-  const struct timespec t = {microseconds/1000000, microseconds%1000000 * 1000};
-
-  nanosleep(&t, NULL);
+  // usleep for slightly less than the requested time, then busy wait the rest
+  // of it.  This givds a more precise delay than using usleep on its own.
+  timestamp_t end = GetTime() + NanoToTime((u64)microseconds * (u64)1000);
+  if (microseconds > DELAY_MARGIN) usleep(microseconds - DELAY_MARGIN);
+  while (GetTime() < end);
 }
-
-#endif  //ifndef LOVEYLIB_APPLE

@@ -93,13 +93,6 @@ struct format_buf_t {
     return *this;
   }
 
-  template<uptr N>
-  inline format_buf_t &s(const char (&v)[N]) {
-    memcpy(p, v, N-1);
-    p += N-1;
-    return *this;
-  }
-
   inline format_buf_t &s(char v) {
     *p++ = v;
     return *this;

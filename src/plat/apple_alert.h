@@ -24,53 +24,13 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
- * This file is part of LoveyLib
- *
- * test/src/loveylib_config.h.in:
- *  An example of how you can customize loveylib_config.h
- *  to your needs
+ * This file is part of I Wanna Slay the Dragon of Bangan
  *
  ************************************************************/
 
-#ifndef _LOVEYLIB_CONFIG_H
-#define _LOVEYLIB_CONFIG_H
+#ifndef _PLAT_APPLE_ALERT_H
+#define _PLAT_APPLE_ALERT_H
 
-// Is this platform windows?
-#cmakedefine LOVEYLIB_WIN32
+void AppleAlert(const char *msg);
 
-// Does this platform have posix headers?
-#cmakedefine LOVEYLIB_POSIX
-
-// Is this platform little endian?
-#cmakedefine LOVEYLIB_LITTLE
-
-// Is this platform big endian?
-#cmakedefine LOVEYLIB_BIG
-
-// Does this compiler have GNU extensions?
-#cmakedefine LOVEYLIB_GNU
-
-// Does this compiler have MSVC extensions?
-#cmakedefine LOVEYLIB_MSVC
-
-// Does this platform support SSE & SSE2?
-#cmakedefine LOVEYLIB_SSE
-
-// Does this platform have Xlib?
-// NOTE: This check is for the libraries, not the
-// compatibility the current platform has with X11
-#cmakedefine LOVEYLIB_XLIB
-
-// Does this platform have XShm libraries?
-#cmakedefine LOVEYLIB_XSHM
-
-// Does this platform have OpenGL?
-#cmakedefine LOVEYLIB_OPENGL
-
-// Does this platform have multi-threading support?
-#cmakedefine LOVEYLIB_THREADS
-
-// Is this platform macos?
-#cmakedefine LOVEYLIB_APPLE
-
-#endif //_LOVEYLIB_CONFIG_H
+#endif  //ifndef _PLAT_APPLE_ALERT_H

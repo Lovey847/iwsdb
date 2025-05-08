@@ -29,6 +29,11 @@
  ************************************************************/
 
 #include "log.h"
+#include "loveylib_config.h"
+
+#ifdef LOVEYLIB_APPLE
+#include "plat/apple_alert.h"
+#endif
 
 #include <cstdlib>
 
@@ -44,5 +49,10 @@ void CloseLogStreams() {
 
 [[noreturn]] void LogErrorExplicit(const char *file, int line, const char *str) {
   LogInfoExplicit(g_streams, file, line, str);
+
+#ifdef LOVEYLIB_APPLE
+  AppleAlert(str);
+#endif
+
   exit(1);
 }
