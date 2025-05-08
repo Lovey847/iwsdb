@@ -49,5 +49,9 @@
     <string>MacOS/fangame</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>CFBundleIconName</key>
+    <string>icon</string>
+    <key>CFBundleIconFile</key>
+    <string>icon</string>
   </dict>
 </plist>

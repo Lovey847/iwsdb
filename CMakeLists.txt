@@ -171,6 +171,10 @@ if (UNIX)
         file(COPY_FILE "${CMAKE_SOURCE_DIR}/src/plat/apple_info.plist"
                        "${CMAKE_BINARY_DIR}/fangame.app/Contents/Info.plist")
 
+        # Copy icon into app folder
+        file(COPY_FILE "${CMAKE_SOURCE_DIR}/src/plat/apple_icon.icns"
+                       "${CMAKE_BINARY_DIR}/fangame.app/Contents/Resources/icon.icns")
+
         # Add target for metal shaders
         set(MC_FLAGS -Wall -Wextra -pedantic -I${CMAKE_SOURCE_DIR}/src -I${CMAKE_BINARY_DIR})
         set(MC_OUT "${MAC_RESOURCES}/default.metallib")
